@@ -1,6 +1,10 @@
-#### Battleship game client
-#import game_common # module for common game code for the client and server
-#import threading
+#!/usr/bin/env python3
+
+'''
+Battleship game client
+'''
+
+#import game_common # placeholder name of our module for common game code for the client and server
 import socket
 
 # When sending "messages", this is how many bytes long the length field is
