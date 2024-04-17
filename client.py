@@ -71,9 +71,12 @@ def get_address_and_connect_socket() -> socket.socket:
         try:
             return socket.create_connection((server_ip, port), timeout=2) # uses TCP
         except:
-            print(f"Could not establish connection to {server_ip} on port {port}")
+            print(f"Connection request timed out. Could not establish connection to {server_ip} on port {port}")
             print("Re-enter IP address and port number to try again...")
             continue
+
+def get_user_move() -> str:
+    raise NotImplementedError("not yet")
 
 def main() -> None:
     while True:
@@ -90,6 +93,17 @@ def main() -> None:
             sock.close()
             continue
     print(f"Joined server! (response={response})")
+    while True:
+        msg = recv_message(sock)
+        if msg != "your turn":
+            print(f"server sent {msg}")
+            continue
+        move = get_user_move()
+        send_message(sock, f"move {move}")
+        msg = recv_message(sock)
+        if msg != "move ok":
+            print(f"Server said invalid move... quitting")
+            break
     sock.close()
 
 if __name__ == '__main__':
