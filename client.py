@@ -48,8 +48,8 @@ def message_send(sock: socket.socket, message: str, do_log=True):
     assert(PREFIX_LENGTH == 5)
     length = "{:0>5}".format(len(message))
     if do_log: print(f'(message_send)"{length}{message}"')
-    sock.sendall(length.encode("utf-8"))
-    sock.sendall(message.encode("utf-8"))
+    sock.sendall(length.encode())
+    sock.sendall(message.encode())
 
 def message_recv(sock: socket.socket, do_log=True) -> str:
     '''
@@ -59,7 +59,8 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
     - where the length field is a fixed-length number string (like "00009")
     - where the data field is a string with length given by converting the length field to an integer
     '''
-    if do_log: print("(message_recv)")
+    if do_log: 
+        print("(message_recv)...")
     try:
         length_bytes = sock.recv(PREFIX_LENGTH)
         length_field = length_bytes.decode()
@@ -68,16 +69,21 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
     if len(length_field) == 0:
         raise ValueError("connection is closed")
     if (l := len(length_field)) != PREFIX_LENGTH:
-        raise ValueError(f"the connection sent a length field which itself has an unexpected of {l}")
+        raise ValueError(f"the connection sent a length field which itself has an unexpected length of {l}")
     try:
         length_num = int(length_field)
     except ValueError:
-        raise ValueError("the connection sent an invalid length value")
-    if do_log: print(f"(message_recv){length_field}")
+        raise ValueError("the connection sent a length field which could not be converted to an integer value")
+    if length_num <= 0:
+        raise ValueError(f"the connection sent a non-positive integer in the length field: {length_num}")
+    if do_log: 
+        print(f"(message_recv){length_field}...")
     try:
-        data_field = sock.recv(length_num).decode()
+        data_field = sock.recv(length_num, socket.MSG_WAITALL).decode()
     except OSError:
         raise ValueError("could not receive the full data response from the connection")
+    if (actual_length := len(data_field)) != length_num:
+        raise ValueError(f"connection indicated it would send {length_num} bytes, but {actual_length} bytes was actually received")
     return data_field
     
 def message_send_join(sock: socket.socket):
@@ -196,7 +202,7 @@ def main() -> None:
         elif str_server_join_accept_p(response):
             break
         else:
-            print("The server is hosting a game and refused your request to join game (a game may already be running)")
+            print("The requested server is hosting a game and refused your request to join game (a game may already be running)")
             sock.close()
             continue
     print(f"Joined server! (response={response})")
