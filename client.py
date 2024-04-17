@@ -27,16 +27,16 @@ def input_port() -> int:
             continue
         return port_num
     
-# Send a length-prefixed message string to the socket connection.
 def message_send(sock: socket.socket, message: str):
+    '''Send a length-prefixed message string to the socket connection.'''
     assert(PREFIX_LENGTH == 5)
     length = "{:0>5}".format(len(message))
     print(f"send_message (length={length})")
     sock.sendall(length.encode("utf-8"))
     sock.sendall(message.encode("utf-8"))
 
-# Receive a length-prefixed message string from the socket connection.
 def message_recv(sock: socket.socket, do_log=True) -> str:
+    '''Receive a length-prefixed message string from the socket connection.'''
     if do_log: print("awaiting message length from connection...")
     try:
         length_field = sock.recv(PREFIX_LENGTH)
@@ -55,16 +55,20 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
         raise ValueError("could not receive the full data response from the connection")
     return data_field
     
-def join_game(sock: socket.socket) -> str|None:
+def message_send_join(sock: socket.socket):
+    '''NOTE: this will change based on what we agree on for the net protocol.'''
     message_send(sock, "join")
+
+def join_game(sock: socket.socket) -> str|None:
+    '''Send a request to join a server's game and get the response.'''
+    message_send_join(sock)
     try:
-        response = message_recv(sock)
+        return message_recv(sock)
     except:
         return None
-    return response
 
-# Get a user address until a connection can be established
 def get_address_and_connect_socket() -> socket.socket:
+    '''Get a user address until a connection can be established'''
     family = socket.AF_INET # use IPv4
     while True:
         server_ip = input_IP()
@@ -81,24 +85,32 @@ def get_address_and_connect_socket() -> socket.socket:
             print("Re-enter IP address and port number to try again...")
             continue
 
-# Predicate function for if a server response indicates that it accepts the client's join request.
-# NOTE: subject to change based on what we agree on for the net protocol.
 def str_server_join_accept_p(s: str) -> bool:
+    '''
+    Predicate function for if a server response indicates that it accepts the client's join request.
+    NOTE: this will change based on what we agree on for the net protocol.
+    '''
     return s == "server_yes"
 
-# Predicate function for if a server response indicates that it is the clients turn to make a move.
-# NOTE: subject to change based on what we agree on for the net protocol.
 def str_server_my_turn_p(s: str) -> bool:
+    '''
+    Predicate function for if a server response indicates that it is the clients turn to make a move.
+    NOTE: this will change based on what we agree on for the net protocol.
+    '''
     return s == "your_turn"
 
-# Predicate function for if a server response indicates that the previously sent move is ok with the server.
-# NOTE: subject to change based on what we agree on for the net protocol.
 def str_server_is_ok_move(s: str) -> bool:
+    '''
+    Predicate function for if a server response indicates that the previously sent move is ok with the server.
+    NOTE: this will change based on what we agree on for the net protocol.
+    '''
     return s == "move_ok"
 
-# Send a game client move to be made to the server socket.
-# NOTE: subject to change based on what we agree on for the net protocol.
 def send_move(sock: socket.socket, move: str):
+    '''
+    Send a game client move to be made to the server socket.
+    NOTE: this will change based on what we agree on for the net protocol.
+    '''
     message_send(sock, f"do_move {move}")
 
 def get_user_move() -> str:
