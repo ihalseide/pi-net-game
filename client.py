@@ -27,32 +27,38 @@ def input_port() -> int:
             continue
         return port_num
     
-def send_message(sock: socket.socket, message: str):
+# Send a length-prefixed message string to the socket connection.
+def message_send(sock: socket.socket, message: str):
     assert(PREFIX_LENGTH == 5)
     length = "{:0>5}".format(len(message))
     print(f"send_message (length={length})")
     sock.sendall(length.encode("utf-8"))
     sock.sendall(message.encode("utf-8"))
 
-def recv_message(sock: socket.socket) -> str:
+# Receive a length-prefixed message string from the socket connection.
+def message_recv(sock: socket.socket, do_log=True) -> str:
+    if do_log: print("awaiting message length from connection...")
     try:
-        length = sock.recv(PREFIX_LENGTH)
+        length_field = sock.recv(PREFIX_LENGTH)
     except OSError:
         raise ValueError("could not receive response from connection")
+    if len(length_field) != PREFIX_LENGTH:
+        raise ValueError("the connection sent a length field which itself has the wrong length")
     try:
-        length_num = int(length)
+        length_num = int(length_field)
     except ValueError:
-        raise ValueError("connection sent invalid length")
+        raise ValueError("the connection sent an invalid length value")
+    if do_log: print("awaiting message data from connection...")
     try:
-        result = str(sock.recv(length_num))
+        data_field = str(sock.recv(length_num))
     except OSError:
-        raise ValueError("could not receive response from connection")
-    return result
+        raise ValueError("could not receive the full data response from the connection")
+    return data_field
     
 def join_game(sock: socket.socket) -> str|None:
-    send_message(sock, "join")
+    message_send(sock, "join")
     try:
-        response = recv_message(sock)
+        response = message_recv(sock)
     except:
         return None
     return response
@@ -75,18 +81,44 @@ def get_address_and_connect_socket() -> socket.socket:
             print("Re-enter IP address and port number to try again...")
             continue
 
+# Predicate function for if a server response indicates that it accepts the client's join request.
+# NOTE: subject to change based on what we agree on for the net protocol.
+def str_server_join_accept_p(s: str) -> bool:
+    return s == "server_yes"
+
+# Predicate function for if a server response indicates that it is the clients turn to make a move.
+# NOTE: subject to change based on what we agree on for the net protocol.
+def str_server_my_turn_p(s: str) -> bool:
+    return s == "your_turn"
+
+# Predicate function for if a server response indicates that the previously sent move is ok with the server.
+# NOTE: subject to change based on what we agree on for the net protocol.
+def str_server_is_ok_move(s: str) -> bool:
+    return s == "move_ok"
+
+# Send a game client move to be made to the server socket.
+# NOTE: subject to change based on what we agree on for the net protocol.
+def send_move(sock: socket.socket, move: str):
+    message_send(sock, f"do_move {move}")
+
 def get_user_move() -> str:
     raise NotImplementedError("not yet")
 
 def main() -> None:
+    print("Welcome to the game client")
     while True:
-        sock = get_address_and_connect_socket()
+        # Loop to forever keep getting server addresses to try and join.
+        try:
+            sock = get_address_and_connect_socket()
+        except KeyboardInterrupt:
+            print("\nCancelled.")
+            return
         response = join_game(sock)
         if response is None:
             print("The server is not hosting a joinable game")
             sock.close()
             continue
-        elif response == "yes":
+        elif str_server_join_accept_p(response):
             break
         else:
             print("The server is hosting a game and refused your request to join game (a game may already be running)")
@@ -94,17 +126,21 @@ def main() -> None:
             continue
     print(f"Joined server! (response={response})")
     while True:
-        msg = recv_message(sock)
-        if msg != "your turn":
-            print(f"server sent {msg}")
+        # Loop to forever keep sending moves when it is this client's turn.
+        msg = message_recv(sock)
+        if not str_server_my_turn_p(msg):
+            print(f"Not my turn")
+            print(f"server sent: \"{msg}\"")
             continue
         move = get_user_move()
-        send_message(sock, f"move {move}")
-        msg = recv_message(sock)
-        if msg != "move ok":
-            print(f"Server said invalid move... quitting")
+        send_move(sock, move)
+        msg = message_recv(sock)
+        if not str_server_is_ok_move(msg):
+            print(f"Invalid move")
+            print(f"server sent: \"{msg}\"")
             break
     sock.close()
+    print("Goodbye from the game client")
 
 if __name__ == '__main__':
     main()
