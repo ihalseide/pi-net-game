@@ -110,6 +110,29 @@ def str_server_is_ok_move(s: str) -> bool:
     '''
     return s == "move_ok"
 
+def recv_is_setup_ok(sock: socket.socket) -> bool:
+    '''
+    Get if the previously sent board setup is ok from the server.
+    NOTE: this will change based on what we agree on for the net protocol.
+    '''
+    return str_server_is_ok_move(message_recv(sock))
+
+def send_setup(sock: socket.socket, board: str):
+    '''NOTE: this will change based on what we agree on for the net protocol.'''
+    message_send(sock, f"board_setup {board}")
+
+def agree_setup(sock: socket.socket, board: str) -> bool:
+    send_setup(sock, board)
+    return recv_is_setup_ok(sock)
+
+def agree_move(sock: socket.socket, move: str) -> bool:
+    '''
+    Send a move and get if it is accepted by the server.
+    '''
+    send_move(sock, move)
+    msg = message_recv(sock)
+    return str_server_is_ok_move(msg)
+
 def send_move(sock: socket.socket, move: str):
     '''
     Send a game client move to be made to the server socket.
@@ -120,7 +143,14 @@ def send_move(sock: socket.socket, move: str):
 def get_user_move() -> str:
     raise NotImplementedError("not yet")
 
+def read_file(file_path: str) -> bytes:
+    '''Read a whole file.'''
+    with open(file_path, 'rb') as f:
+        return f.read()
+
 def main() -> None:
+    fixed_board = read_file("fixedBoard.txt").decode('utf-8')
+    print(fixed_board)
     print("Welcome to the game client")
     while True:
         # Loop to forever keep getting server addresses to try and join.
@@ -141,6 +171,9 @@ def main() -> None:
             sock.close()
             continue
     print(f"Joined server! (response={response})")
+    if not agree_setup(sock, fixed_board):
+        print("server denied the board")
+        return
     while True:
         # Loop to forever keep sending moves when it is this client's turn.
         msg = message_recv(sock)
@@ -149,9 +182,7 @@ def main() -> None:
             print(f"server sent: \"{msg}\"")
             continue
         move = get_user_move()
-        send_move(sock, move)
-        msg = message_recv(sock)
-        if not str_server_is_ok_move(msg):
+        if not agree_move(sock, move):
             print(f"Invalid move")
             print(f"server sent: \"{msg}\"")
             break
