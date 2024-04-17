@@ -182,10 +182,27 @@ def read_file(file_path: str) -> bytes:
     '''Read a whole file.'''
     with open(file_path, 'rb') as f:
         return f.read()
+    
+def display_board(board: str):
+    lines = board.split()
+    assert(len(lines) == 10)
+    print(end=" ")
+    for i in range(10):
+        print(end=f"{1+i: >3}")
+    print()
+    print('-'*(10*3+2))
+    for i in range(10):
+        line = lines[i]
+        assert(len(line) == 10)
+        letter = "ABCDEFGHIJ"[i]
+        print(end=f"{letter}| ")
+        for j in range(10):
+            print(line[j], end='  ')
+        print()
 
 def main() -> None:
     test_board_layout = read_file("fixedBoard.txt").decode()
-    print(test_board_layout)
+    display_board(test_board_layout)
     print("Welcome to the game client")
     while True:
         # Loop to forever keep getting server addresses to try and join.
