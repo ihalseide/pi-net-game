@@ -176,7 +176,7 @@ def send_move(sock: socket.socket, move: str):
 
 def get_user_move() -> str:
     # TODO: implement this
-    raise NotImplementedError("not yet")
+    raise NotImplementedError("player move not yet implemented")
 
 def read_file(file_path: str) -> bytes:
     '''Read a whole file.'''
@@ -208,7 +208,7 @@ def main() -> None:
         # Loop to forever keep getting server addresses to try and join.
         try:
             sock = get_address_and_connect_socket()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             print("\nCancelled.")
             return
         response = join_game(sock)
