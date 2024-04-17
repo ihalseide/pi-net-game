@@ -7,10 +7,13 @@ Battleship game client
 #import game_common # placeholder name of our module for common game code for the client and server
 import socket
 
-# When sending "messages", this is how many bytes long the length field is
-PREFIX_LENGTH = 5
+# When sending network messages, this is how many bytes long the length field is
+PREFIX_LENGTH: int = 5
 
 def input_IP() -> str:
+    '''
+    Get a IP address from the local user.
+    '''
     while True:
         ip = input("Server IP address: ").strip()
         if not ip:
@@ -19,6 +22,9 @@ def input_IP() -> str:
         return ip
 
 def input_port() -> int:
+    '''
+    Get a port number from the local user.
+    '''
     while True:
         port = input("Server port number: ").strip()
         try:
@@ -60,7 +66,10 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
     return data_field
     
 def message_send_join(sock: socket.socket):
-    '''NOTE: this will change based on what we agree on for the net protocol.'''
+    '''
+    Send a [join] message to the connection.
+    NOTE: this will change based on what we agree on for the net protocol.
+    '''
     message_send(sock, "join")
 
 def join_game(sock: socket.socket) -> str|None:
