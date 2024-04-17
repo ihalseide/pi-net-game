@@ -38,7 +38,13 @@ def input_port() -> int:
         return port_num
     
 def message_send(sock: socket.socket, message: str):
-    '''Send a length-prefixed message string to the socket connection.'''
+    '''
+    Send a length-prefixed message string to the socket connection.
+    This function is the counterpart to `message_recv`.
+    Messages are in the form: [length field][data field]
+    - where the length field is a fixed-length number string (like "00009")
+    - where the data field is a string with length given by converting the length field to an integer
+    '''
     assert(PREFIX_LENGTH == 5)
     length = "{:0>5}".format(len(message))
     print(f"send_message (length={length})")
@@ -46,7 +52,13 @@ def message_send(sock: socket.socket, message: str):
     sock.sendall(message.encode("utf-8"))
 
 def message_recv(sock: socket.socket, do_log=True) -> str:
-    '''Receive a length-prefixed message string from the socket connection.'''
+    '''
+    Receive a length-prefixed message string from the socket connection.
+    This function is the counterpart to `message_send`.
+    Messages are in the form: [length field][data field]
+    - where the length field is a fixed-length number string (like "00009")
+    - where the data field is a string with length given by converting the length field to an integer
+    '''
     if do_log: print("awaiting message length from connection...")
     try:
         length_field = sock.recv(PREFIX_LENGTH)
