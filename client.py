@@ -4,10 +4,10 @@
 Battleship game client
 '''
 
-#import game_common # placeholder name of our module for common game code for the client and server
+#import game_common # placeholder name of our module for common game code for the client and server.
 import socket
 
-# When sending network messages, this is how many bytes long the length field is
+# When sending network messages, this is how many bytes long the `length field` is.
 PREFIX_LENGTH: int = 5
 
 def input_IP() -> str:
@@ -37,7 +37,7 @@ def input_port() -> int:
             continue
         return port_num
     
-def message_send(sock: socket.socket, message: str):
+def message_send(sock: socket.socket, message: str, do_log=True):
     '''
     Send a length-prefixed message string to the socket connection.
     This function is the counterpart to `message_recv`.
@@ -47,7 +47,7 @@ def message_send(sock: socket.socket, message: str):
     '''
     assert(PREFIX_LENGTH == 5)
     length = "{:0>5}".format(len(message))
-    print(f"send_message (length={length})")
+    if do_log: print(f'(message_send)"{length}{message}"')
     sock.sendall(length.encode("utf-8"))
     sock.sendall(message.encode("utf-8"))
 
@@ -59,20 +59,23 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
     - where the length field is a fixed-length number string (like "00009")
     - where the data field is a string with length given by converting the length field to an integer
     '''
-    if do_log: print("awaiting message length from connection...")
+    if do_log: print("(message_recv)")
     try:
-        length_field = sock.recv(PREFIX_LENGTH)
+        length_bytes = sock.recv(PREFIX_LENGTH)
+        length_field = length_bytes.decode()
     except OSError:
         raise ValueError("could not receive response from connection")
-    if len(length_field) != PREFIX_LENGTH:
-        raise ValueError("the connection sent a length field which itself has the wrong length")
+    if len(length_field) == 0:
+        raise ValueError("connection is closed")
+    if (l := len(length_field)) != PREFIX_LENGTH:
+        raise ValueError(f"the connection sent a length field which itself has an unexpected of {l}")
     try:
         length_num = int(length_field)
     except ValueError:
         raise ValueError("the connection sent an invalid length value")
-    if do_log: print("awaiting message data from connection...")
+    if do_log: print(f"(message_recv){length_field}")
     try:
-        data_field = str(sock.recv(length_num))
+        data_field = sock.recv(length_num).decode()
     except OSError:
         raise ValueError("could not receive the full data response from the connection")
     return data_field
@@ -89,7 +92,8 @@ def join_game(sock: socket.socket) -> str|None:
     message_send_join(sock)
     try:
         return message_recv(sock)
-    except:
+    except Exception as e:
+        print(e)
         return None
 
 def get_address_and_connect_socket() -> socket.socket:
@@ -124,27 +128,30 @@ def str_server_my_turn_p(s: str) -> bool:
     '''
     return s == "your_turn"
 
-def str_server_is_ok_move(s: str) -> bool:
+def str_server_ok_move_p(s: str) -> bool:
     '''
     Predicate function for if a server response indicates that the previously sent move is ok with the server.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
     return s == "move_ok"
 
-def recv_is_setup_ok(sock: socket.socket) -> bool:
+def recv_setup_ok_p(sock: socket.socket) -> bool:
     '''
     Get if the previously sent board setup is ok from the server.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
-    return str_server_is_ok_move(message_recv(sock))
+    return str_server_ok_move_p(message_recv(sock))
 
 def send_setup(sock: socket.socket, board: str):
     '''NOTE: this will change based on what we agree on for the net protocol.'''
     message_send(sock, f"board_setup {board}")
 
 def agree_setup(sock: socket.socket, board: str) -> bool:
+    '''
+    Send a setup to the connection and return whether the connection replies with a message that indicates the setup was approved.
+    '''
     send_setup(sock, board)
-    return recv_is_setup_ok(sock)
+    return recv_setup_ok_p(sock)
 
 def agree_move(sock: socket.socket, move: str) -> bool:
     '''
@@ -152,7 +159,7 @@ def agree_move(sock: socket.socket, move: str) -> bool:
     '''
     send_move(sock, move)
     msg = message_recv(sock)
-    return str_server_is_ok_move(msg)
+    return str_server_ok_move_p(msg)
 
 def send_move(sock: socket.socket, move: str):
     '''
@@ -162,6 +169,7 @@ def send_move(sock: socket.socket, move: str):
     message_send(sock, f"do_move {move}")
 
 def get_user_move() -> str:
+    # TODO: implement this
     raise NotImplementedError("not yet")
 
 def read_file(file_path: str) -> bytes:
@@ -170,8 +178,8 @@ def read_file(file_path: str) -> bytes:
         return f.read()
 
 def main() -> None:
-    fixed_board = read_file("fixedBoard.txt").decode('utf-8')
-    print(fixed_board)
+    test_board_layout = read_file("fixedBoard.txt").decode()
+    print(test_board_layout)
     print("Welcome to the game client")
     while True:
         # Loop to forever keep getting server addresses to try and join.
@@ -192,7 +200,9 @@ def main() -> None:
             sock.close()
             continue
     print(f"Joined server! (response={response})")
-    if not agree_setup(sock, fixed_board):
+    if not agree_setup(sock, test_board_layout):
+        # For now, give up
+        sock.close()
         print("server denied the board")
         return
     while True:
