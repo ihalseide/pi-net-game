@@ -9,7 +9,10 @@ import socket
 
 ## When sending network messages, this is how many bytes long the `length field` is.
 ## NOTE: this will change based on what we agree on for the net protocol.
-PREFIX_LENGTH: int = 5
+LENGTH_PREFIX_LENGTH: int = 5
+
+# File path of where to store a IP address and port information for a connection.
+ADDRESS_FILE_PATH: str = "server.txt"
 
 def message_send(sock: socket.socket, message: str, do_log=True):
     '''
@@ -19,8 +22,9 @@ def message_send(sock: socket.socket, message: str, do_log=True):
     - where the length field is a fixed-length number string (like "00009")
     - where the data field is a string with length given by converting the length field to an integer
     '''
-    assert(PREFIX_LENGTH == 5) # If this assertion is incorrect, then update this line and the next one.
-    length_field = "{:0>5}".format(len(message))
+    length = len(message)
+    assert(LENGTH_PREFIX_LENGTH == 5) # If this assertion is incorrect, then update this line and the next one.
+    length_field = "{:0>5}".format(length)
     if do_log: print(f'(message_send)"{length_field}{message}"')
     sock.sendall(length_field.encode())
     sock.sendall(message.encode())
@@ -34,31 +38,31 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
     - where the data field is a string with length given by converting the length field to an integer
     '''
     if do_log: 
-        print("(message_recv)...")
+        print(f"(message_recv {LENGTH_PREFIX_LENGTH})...")
     try:
-        length_bytes = sock.recv(PREFIX_LENGTH)
-        length_field = length_bytes.decode()
+        length_field = sock.recv(LENGTH_PREFIX_LENGTH, socket.MSG_WAITALL)
     except OSError:
         raise ValueError("could not receive response from connection")
-    if len(length_field) == 0:
-        raise ValueError("connection is closed")
-    if (l := len(length_field)) != PREFIX_LENGTH:
+    length_str = length_field.decode()
+    if len(length_str) == 0:
+        raise OSError("connection is closed")
+    if (l := len(length_str)) != LENGTH_PREFIX_LENGTH:
         raise ValueError(f"the connection sent a length field which itself has an unexpected length of {l}")
     try:
-        length_num = int(length_field)
+        length_num = int(length_str)
     except ValueError:
         raise ValueError("the connection sent a length field which could not be converted to an integer value")
     if length_num <= 0:
         raise ValueError(f"the connection sent a non-positive integer in the length field: {length_num}")
     if do_log: 
-        print(f"(message_recv){length_field}...")
+        print(f"(message_recv){length_str}...")
     try:
-        data_field = sock.recv(length_num, socket.MSG_WAITALL).decode()
+        data_field = sock.recv(length_num, socket.MSG_WAITALL)
     except OSError:
         raise ValueError("could not receive the full data response from the connection")
     if (actual_length := len(data_field)) != length_num:
         raise ValueError(f"connection indicated it would send {length_num} bytes, but {actual_length} bytes was actually received")
-    return data_field
+    return data_field.decode()
     
 def message_send_join(sock: socket.socket):
     '''
@@ -76,10 +80,10 @@ def join_game(sock: socket.socket) -> str|None:
     try:
         return message_recv(sock)
     except Exception as e:
-        print(e)
+        print('EXCEPTION WHILE JOINING', e)
         return None
 
-def get_address_and_connect_socket() -> socket.socket:
+def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
     '''Get a user address until a connection can be established'''
     family = socket.AF_INET # use IPv4
     saved_server_ip = input_IP()
@@ -105,7 +109,10 @@ def get_address_and_connect_socket() -> socket.socket:
         saved_server_ip = server_ip
         port = input_port()
         try:
-            return socket.create_connection((server_ip, port), timeout=2) # uses TCP
+            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
+            sock.connect((server_ip, port))
+            return server_ip, port, sock
+            #return socket.create_connection((server_ip, port), timeout=2) # uses TCP
         except:
             print(f"Connection request timed out. Could not establish connection to {server_ip} on port {port}")
             print("Re-enter IP address and port number to try again...")
@@ -196,9 +203,14 @@ def get_user_move() -> str:
         return ans
 
 def read_file(file_path: str) -> bytes:
-    '''Read a whole file.'''
+    '''Read and return all of the contents of the file at `file_path`.'''
     with open(file_path, 'rb') as f:
         return f.read()
+    
+def stamp_file(file_path: str, contents: bytes) -> int:
+    '''Overwrite a file at `file_path` with `contents`.'''
+    with open(file_path, 'wb') as f:
+        return f.write(contents)
     
 ## Quick temporary implementation of this function.
 ## TODO: make this better.
@@ -248,6 +260,25 @@ def input_port() -> int:
             print("Please enter a port number value that is less than 2^16.")
             continue
         return port_num
+    
+def save_address(ip: str, port: int):
+    '''
+    Save a IP:port value to a fixed file.
+    '''
+    data = " ".join(( ip, str(port), ))
+    stamp_file(ADDRESS_FILE_PATH, data.encode())
+
+def load_address() -> tuple[str, int]:
+    '''
+    Load a saved IP:port value from a fixed file.
+    '''
+    data = read_file(ADDRESS_FILE_PATH).decode()
+    ip, port = data.split()
+    try:
+        port_num = int(port)
+    except ValueError:
+        port_num = 0
+    return ip, port_num
 
 def main() -> None:
     test_board_layout = read_file("fixedBoard.txt").decode()
@@ -256,7 +287,10 @@ def main() -> None:
     while True:
         # Loop to forever keep getting server addresses to try and join.
         try:
-            sock = get_address_and_connect_socket()
+            # Create socket and save a successful connection to a file
+            ip, port, sock = get_address_and_connect_socket()
+            print(ip, port, sock)
+            save_address(ip, socket.ntohs(port))
         except (KeyboardInterrupt, EOFError):
             print("\nCancelled.")
             return
