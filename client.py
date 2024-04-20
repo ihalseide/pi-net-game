@@ -7,8 +7,8 @@ Battleship game client
 import Battleship as bs
 import socket
 
-# When sending network messages, this is how many bytes long the `length field` is.
-# NOTE: this will change based on what we agree on for the net protocol.
+## When sending network messages, this is how many bytes long the `length field` is.
+## NOTE: this will change based on what we agree on for the net protocol.
 PREFIX_LENGTH: int = 5
 
 def message_send(sock: socket.socket, message: str, do_log=True):
@@ -172,9 +172,11 @@ def get_user_move() -> str:
         if len(ans) != 2 and len(ans) != 3:
             print("Coordinates should just a row-column text like 'a1' or 'j10'.")
             continue
-        if ans[0] not in 'abcdefghij': # TODO: use a Battleship function for this
+        ## TODO: use a Battleship function for this
+        if ans[0] not in 'abcdefghij':
             print("Row should be a letter, A-J")
             continue
+        ## TODO: use a Battleship function for this
         if ans[1:] not in ('1','2','3','4','5','6','7','8','9','10'):
             print("Column should be a number, 1-10")
         return ans
@@ -184,8 +186,8 @@ def read_file(file_path: str) -> bytes:
     with open(file_path, 'rb') as f:
         return f.read()
     
-# Quick temporary implementation of this function.
-# TODO: make this better.
+## Quick temporary implementation of this function.
+## TODO: make this better.
 def display_board(board: str):
     lines = board.split()
     assert(len(lines) == 10)
