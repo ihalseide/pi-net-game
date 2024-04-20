@@ -262,7 +262,7 @@ def save_address(ip: str, port: int, file_path: str = ADDRESS_FILE_PATH):
     data = f"{ip}\n{port}\n"
     stamp_file(file_path, data.encode())
 
-def main() -> None:
+def client_main() -> None:
     print("Welcome to the game client")
     while True:
         # Loop to forever keep getting server addresses to try and join.
@@ -310,4 +310,4 @@ def main() -> None:
     print("Goodbye from the game client")
 
 if __name__ == '__main__':
-    main()
+    client_main()
