@@ -11,36 +11,6 @@ import socket
 # NOTE: this will change based on what we agree on for the net protocol.
 PREFIX_LENGTH: int = 5
 
-def input_IP() -> str:
-    '''
-    Get a IP address from the local user.
-    '''
-    while True:
-        ip = input("Server IP address: ").strip()
-        if not ip:
-            print("Blank IP address value is invalid.")
-            continue
-        return ip
-
-def input_port() -> int:
-    '''
-    Get a port number from the local user.
-    '''
-    while True:
-        port = input("Server port number: ").strip()
-        try:
-            port_num = int(port)
-        except ValueError:
-            print("Please enter a valid integer value for the port number.")
-            continue
-        if port_num < 0:
-            print("Please enter a non-negative value for the port number.")
-            continue
-        if port_num >= (2**16):
-            print("Please enter a port number value htat is less than 2^16.")
-            continue
-        return port_num
-    
 def message_send(sock: socket.socket, message: str, do_log=True):
     '''
     Send a length-prefixed message string to the socket connection.
@@ -194,14 +164,28 @@ def send_move(sock: socket.socket, move: str):
     message_send(sock, f"do_move {move}")
 
 def get_user_move() -> str:
-    # TODO: implement this
-    raise NotImplementedError("player move not yet implemented")
+    '''
+    Ask the local player for a square to try to hit on the opponent's board.
+    '''
+    while True:
+        ans = input("Enter a square to guess: ").strip().lower()
+        if len(ans) != 2 and len(ans) != 3:
+            print("Coordinates should just a row-column text like 'a1' or 'j10'.")
+            continue
+        if ans[0] not in 'abcdefghij': # TODO: use a Battleship function for this
+            print("Row should be a letter, A-J")
+            continue
+        if ans[1:] not in ('1','2','3','4','5','6','7','8','9','10'):
+            print("Column should be a number, 1-10")
+        return ans
 
 def read_file(file_path: str) -> bytes:
     '''Read a whole file.'''
     with open(file_path, 'rb') as f:
         return f.read()
     
+# Quick temporary implementation of this function.
+# TODO: make this better.
 def display_board(board: str):
     lines = board.split()
     assert(len(lines) == 10)
@@ -209,7 +193,7 @@ def display_board(board: str):
     for i in range(10):
         print(end=f"{1+i: >3}")
     print()
-    print('-'*(10*3+2))
+    print('-'*32)
     for i in range(10):
         line = lines[i]
         assert(len(line) == 10)
@@ -218,6 +202,36 @@ def display_board(board: str):
         for j in range(10):
             print(line[j], end='  ')
         print()
+
+def input_IP() -> str:
+    '''
+    Get a IP address from the local user.
+    '''
+    while True:
+        ip = input("Server IP address: ").strip()
+        if not ip:
+            print("Blank IP address value is invalid.")
+            continue
+        return ip
+
+def input_port() -> int:
+    '''
+    Get a port number from the local user.
+    '''
+    while True:
+        port = input("Server port number: ").strip()
+        try:
+            port_num = int(port)
+        except ValueError:
+            print("Please enter a valid integer value for the port number.")
+            continue
+        if port_num < 0:
+            print("Please enter a non-negative value for the port number.")
+            continue
+        if port_num >= (2**16):
+            print("Please enter a port number value htat is less than 2^16.")
+            continue
+        return port_num
 
 def main() -> None:
     test_board_layout = read_file("fixedBoard.txt").decode()
