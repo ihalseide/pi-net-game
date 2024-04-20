@@ -86,6 +86,8 @@ def join_game(sock: socket.socket) -> str|None:
 def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
     '''Get a user address until a connection can be established'''
     family = socket.AF_INET # use IPv4
+    kind = socket.SOCK_STREAM # use TCP
+    ## Get first IP input.
     saved_server_ip = input_IP()
     first_loop = True
     while True:
@@ -109,7 +111,7 @@ def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
         saved_server_ip = server_ip
         port = input_port()
         try:
-            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
+            sock = socket.socket(family=family, type=kind, proto=0)
             sock.connect((server_ip, port))
             return server_ip, port, sock
             #return socket.create_connection((server_ip, port), timeout=2) # uses TCP
@@ -265,32 +267,18 @@ def save_address(ip: str, port: int):
     '''
     Save a IP:port value to a fixed file.
     '''
-    data = " ".join(( ip, str(port), ))
+    data = f"{ip}\n{port}\n"
     stamp_file(ADDRESS_FILE_PATH, data.encode())
 
-def load_address() -> tuple[str, int]:
-    '''
-    Load a saved IP:port value from a fixed file.
-    '''
-    data = read_file(ADDRESS_FILE_PATH).decode()
-    ip, port = data.split()
-    try:
-        port_num = int(port)
-    except ValueError:
-        port_num = 0
-    return ip, port_num
-
 def main() -> None:
-    test_board_layout = read_file("fixedBoard.txt").decode()
-    display_board(test_board_layout)
     print("Welcome to the game client")
     while True:
         # Loop to forever keep getting server addresses to try and join.
         try:
             # Create socket and save a successful connection to a file
             ip, port, sock = get_address_and_connect_socket()
-            print(ip, port, sock)
-            save_address(ip, socket.ntohs(port))
+            print('INFO', ip, port, sock)
+            save_address(ip, port)
         except (KeyboardInterrupt, EOFError):
             print("\nCancelled.")
             return
@@ -300,12 +288,14 @@ def main() -> None:
             sock.close()
             continue
         elif str_server_join_accept_p(response):
+            ## Successfully joined
             break
         else:
             print("The requested server is hosting a game and refused your request to join game (a game may already be running)")
             sock.close()
             continue
     print(f"Joined server! (response={response})")
+    test_board_layout = read_file("fixedBoard.txt").decode()
     if not agree_setup(sock, test_board_layout):
         # For now, give up
         sock.close()
