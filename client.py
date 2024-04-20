@@ -4,7 +4,7 @@
 Battleship game client
 '''
 
-#import game_common # placeholder name of our module for common game code for the client and server.
+import Battleship as bs # placeholder name of our module for common game code for the client and server.
 import socket
 
 # When sending network messages, this is how many bytes long the `length field` is.
@@ -34,6 +34,9 @@ def input_port() -> int:
             continue
         if port_num < 0:
             print("Please enter a non-negative value for the port number.")
+            continue
+        if port_num >= (2**16):
+            print("Please enter a port number value htat is less than 2^16.")
             continue
         return port_num
     
