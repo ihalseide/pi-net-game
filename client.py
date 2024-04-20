@@ -191,17 +191,9 @@ def get_user_move() -> str:
     Ask the local player for a square to try to hit on the opponent's board.
     '''
     while True:
-        ans = input("Enter a square to guess: ").strip().lower()
-        if len(ans) != 2 and len(ans) != 3:
-            print("Coordinates should just a row-column text like 'a1' or 'j10'.")
-            continue
-        ## TODO: use a Battleship function for this
-        if ans[0] not in 'abcdefghij':
-            print("Row should be a letter, A-J")
-            continue
-        ## TODO: use a Battleship function for this
-        if ans[1:] not in ('1','2','3','4','5','6','7','8','9','10'):
-            print("Column should be a number, 1-10")
+        ans = input("Enter your move (a square to guess): ").strip().lower()
+        if not bs.isValidMove(ans):
+            print(f"Try again, \"{ans}\" is not a valid move.")
         return ans
 
 def read_file(file_path: str) -> bytes:
@@ -263,12 +255,12 @@ def input_port() -> int:
             continue
         return port_num
     
-def save_address(ip: str, port: int):
+def save_address(ip: str, port: int, file_path: str = ADDRESS_FILE_PATH):
     '''
     Save a IP:port value to a fixed file.
     '''
     data = f"{ip}\n{port}\n"
-    stamp_file(ADDRESS_FILE_PATH, data.encode())
+    stamp_file(file_path, data.encode())
 
 def main() -> None:
     print("Welcome to the game client")
@@ -309,6 +301,7 @@ def main() -> None:
             print(f"server sent: \"{msg}\"")
             continue
         move = get_user_move()
+        print(f"move: {move}")
         if not agree_move(sock, move):
             print(f"Invalid move")
             print(f"server sent: \"{msg}\"")
