@@ -82,13 +82,27 @@ def join_game(sock: socket.socket) -> str|None:
 def get_address_and_connect_socket() -> socket.socket:
     '''Get a user address until a connection can be established'''
     family = socket.AF_INET # use IPv4
+    saved_server_ip = input_IP()
+    first_loop = True
     while True:
-        server_ip = input_IP()
+        if first_loop:
+            ## Use the first-entered saved IP
+            server_ip = saved_server_ip
+            first_loop = False
+        else:
+            ## Get new IP address or re-use old value
+            server_ip = input("Enter new server IP (or leave blank to use previous value): ")
+            if not server_ip:
+                print(f"(Reusing previous IP value of \"{saved_server_ip}\")")
+                server_ip = saved_server_ip
+        ## Validate IP address.
         try:
-            server_ip_num = socket.inet_pton(family, server_ip)
+            socket.inet_pton(family, server_ip)
         except OSError:
             print(f"IP address \"{server_ip}\" is invalid.")
             continue
+        ## Save ip address for next time and get port.
+        saved_server_ip = server_ip
         port = input_port()
         try:
             return socket.create_connection((server_ip, port), timeout=2) # uses TCP
@@ -231,7 +245,7 @@ def input_port() -> int:
             print("Please enter a non-negative value for the port number.")
             continue
         if port_num >= (2**16):
-            print("Please enter a port number value htat is less than 2^16.")
+            print("Please enter a port number value that is less than 2^16.")
             continue
         return port_num
 
