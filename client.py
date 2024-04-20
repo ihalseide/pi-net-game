@@ -4,10 +4,11 @@
 Battleship game client
 '''
 
-import Battleship as bs # placeholder name of our module for common game code for the client and server.
+import Battleship as bs
 import socket
 
 # When sending network messages, this is how many bytes long the `length field` is.
+# NOTE: this will change based on what we agree on for the net protocol.
 PREFIX_LENGTH: int = 5
 
 def input_IP() -> str:
@@ -48,10 +49,10 @@ def message_send(sock: socket.socket, message: str, do_log=True):
     - where the length field is a fixed-length number string (like "00009")
     - where the data field is a string with length given by converting the length field to an integer
     '''
-    assert(PREFIX_LENGTH == 5)
-    length = "{:0>5}".format(len(message))
-    if do_log: print(f'(message_send)"{length}{message}"')
-    sock.sendall(length.encode())
+    assert(PREFIX_LENGTH == 5) # If this assertion is incorrect, then update this line and the next one.
+    length_field = "{:0>5}".format(len(message))
+    if do_log: print(f'(message_send)"{length_field}{message}"')
+    sock.sendall(length_field.encode())
     sock.sendall(message.encode())
 
 def message_recv(sock: socket.socket, do_log=True) -> str:
@@ -97,7 +98,10 @@ def message_send_join(sock: socket.socket):
     message_send(sock, "join")
 
 def join_game(sock: socket.socket) -> str|None:
-    '''Send a request to join a server's game and get the response.'''
+    '''
+    Send a request to join a server's game and get the response.
+    NOTE: this will change based on what we agree on for the net protocol.
+    '''
     message_send_join(sock)
     try:
         return message_recv(sock)
@@ -144,31 +148,43 @@ def str_server_ok_move_p(s: str) -> bool:
     '''
     return s == "move_ok"
 
-def recv_setup_ok_p(sock: socket.socket) -> bool:
+def str_server_setup_ok_p(s: str) -> bool:
     '''
     Get if the previously sent board setup is ok from the server.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
-    return str_server_ok_move_p(message_recv(sock))
+    return s == "setup_ok"
 
 def send_setup(sock: socket.socket, board: str):
-    '''NOTE: this will change based on what we agree on for the net protocol.'''
+    '''
+    Send a board setup request to the server.
+    NOTE: this will change based on what we agree on for the net protocol.
+    '''
     message_send(sock, f"board_setup {board}")
+
+def recv_setup_ok(sock: socket.socket) -> bool:
+    '''
+    Receive response from server and see if it indicates that setup was ok.
+    NOTE: this will change based on what we agree on for the net protocol.
+    '''
+    msg = message_recv(sock)
+    return str_server_ok_move_p(msg)
 
 def agree_setup(sock: socket.socket, board: str) -> bool:
     '''
     Send a setup to the connection and return whether the connection replies with a message that indicates the setup was approved.
     '''
     send_setup(sock, board)
-    return recv_setup_ok_p(sock)
+    response = message_recv(sock)
+    return str_server_setup_ok_p(response)
 
 def agree_move(sock: socket.socket, move: str) -> bool:
     '''
     Send a move and get if it is accepted by the server.
     '''
     send_move(sock, move)
-    msg = message_recv(sock)
-    return str_server_ok_move_p(msg)
+    resp = message_recv(sock)
+    return str_server_ok_move_p(resp)
 
 def send_move(sock: socket.socket, move: str):
     '''
