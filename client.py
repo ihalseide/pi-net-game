@@ -11,17 +11,6 @@ import socket
 
 ## File path of where to store a IP address and port information for a connection.
 ADDRESS_FILE_PATH: str = "server.txt"
-
-## Network message types -- based what the a message starts with (the prefix).
-## NOTE: this will change based on what we agree on for the net protocol.
-MSG_JOIN = "join" # from client to server
-MSG_MOVE = "move" # from client to server
-MSG_OUTCOME = "outcome" # from server to client
-MSG_MY_TURN = "turn" # from server to client
-MSG_ACCEPT = "accept" # from server to client
-MSG_FINISHED = "finish" # from server to client
-MSG_FINISHED_LOSE = "lose" # second part of the MSG_FINISHED message
-MSG_FINISHED_WIN = "win" # second part of the MSG_FINISHED message
     
 def message_send_join(sock: socket.socket, board: str):
     '''
