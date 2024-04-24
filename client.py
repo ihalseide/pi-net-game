@@ -11,24 +11,12 @@ import socket
 # File path of where to store a IP address and port information for a connection.
 ADDRESS_FILE_PATH: str = "server.txt"
     
-def message_send_join(sock: socket.socket):
+def message_send_join(sock: socket.socket, board: str):
     '''
     Send a [join] message to the connection.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
-    message_send(sock, "join")
-
-def join_game(sock: socket.socket) -> str|None:
-    '''
-    Send a request to join a server's game and get the response.
-    NOTE: this will change based on what we agree on for the net protocol.
-    '''
-    message_send_join(sock)
-    try:
-        return message_recv(sock)
-    except Exception as e:
-        print('EXCEPTION WHILE JOINING', e)
-        return None
+    message_send(sock, f"join {board}")
 
 def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
     '''Get a user address until a connection can be established'''
@@ -66,65 +54,6 @@ def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
             print(f"Connection request timed out. Could not establish connection to {server_ip} on port {port}")
             print("Re-enter IP address and port number to try again...")
             continue
-
-def str_server_join_accept_p(s: str) -> bool:
-    '''
-    Predicate function for if a server response indicates that it accepts the client's join request.
-    NOTE: this will change based on what we agree on for the net protocol.
-    '''
-    return s == "server_yes"
-
-def str_server_my_turn_p(s: str) -> bool:
-    '''
-    Predicate function for if a server response indicates that it is the clients turn to make a move.
-    NOTE: this will change based on what we agree on for the net protocol.
-    '''
-    return s == "your_turn"
-
-def str_server_ok_move_p(s: str) -> bool:
-    '''
-    Predicate function for if a server response indicates that the previously sent move is ok with the server.
-    NOTE: this will change based on what we agree on for the net protocol.
-    '''
-    return s == "move_ok"
-
-def str_server_setup_ok_p(s: str) -> bool:
-    '''
-    Get if the previously sent board setup is ok from the server.
-    NOTE: this will change based on what we agree on for the net protocol.
-    '''
-    return s == "setup_ok"
-
-def send_setup(sock: socket.socket, board: str):
-    '''
-    Send a board setup request to the server.
-    NOTE: this will change based on what we agree on for the net protocol.
-    '''
-    message_send(sock, f"board_setup {board}")
-
-def recv_setup_ok(sock: socket.socket) -> bool:
-    '''
-    Receive response from server and see if it indicates that setup was ok.
-    NOTE: this will change based on what we agree on for the net protocol.
-    '''
-    msg = message_recv(sock)
-    return str_server_ok_move_p(msg)
-
-def agree_setup(sock: socket.socket, board: str) -> bool:
-    '''
-    Send a setup to the connection and return whether the connection replies with a message that indicates the setup was approved.
-    '''
-    send_setup(sock, board)
-    response = message_recv(sock)
-    return str_server_setup_ok_p(response)
-
-def agree_move(sock: socket.socket, move: str) -> bool:
-    '''
-    Send a move and get if it is accepted by the server.
-    '''
-    send_move(sock, move)
-    resp = message_recv(sock)
-    return str_server_ok_move_p(resp)
 
 def send_move(sock: socket.socket, move: str):
     '''
@@ -221,12 +150,13 @@ def client_main() -> None:
         except (KeyboardInterrupt, EOFError):
             print("\nCancelled.")
             return
-        response = join_game(sock)
+        message_send_join(sock, bs.convertGameBoardToString(bs.gameBoard))
+        response = message_recv(sock)
         if response is None:
             print("The server is not hosting a joinable game")
             sock.close()
             continue
-        elif str_server_join_accept_p(response):
+        elif response == "accept":
             ## Successfully joined
             break
         else:
@@ -234,27 +164,27 @@ def client_main() -> None:
             sock.close()
             continue
     print(f"Joined server! (response={response})")
-    test_board_layout = read_file("fixedBoard.txt").decode()
-    if not agree_setup(sock, test_board_layout):
-        # For now, give up
-        sock.close()
-        print("server denied the board")
-        return
     while True:
-        # Loop to forever keep sending moves when it is this client's turn.
+        # Main client game loop to forever keep sending moves when it is this client's turn.
         msg = message_recv(sock)
-        if not str_server_my_turn_p(msg):
-            print(f"Not my turn")
-            print(f"server sent: \"{msg}\"")
-            continue
-        move = get_user_move()
-        print(f"move: {move}")
-        if not agree_move(sock, move):
-            print(f"Invalid move")
-            print(f"server sent: \"{msg}\"")
+        if msg == "turn":
+            # Our turn to go
+            move = get_user_move()
+            print(f"move: {move}")
+            send_move(sock, move)
+        elif msg.startswith("finish"):
+            the_rest = msg.split(maxsplit=1)[1]
+            if the_rest == "lose":
+                print("Game over, you lost.")
+            elif the_rest == "win":
+                print("Game over, you")
+                print("Closing connection to server.")
+            sock.close()
+            print("Goodbye from the game client")
             break
-    sock.close()
-    print("Goodbye from the game client")
+        else:
+            print(f"Unhandled server message type.")
+            print(f"Received server data: '{msg}'")
 
 if __name__ == '__main__':
     client_main()
