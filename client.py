@@ -191,20 +191,24 @@ def client_main() -> None:
         except (KeyboardInterrupt, EOFError):
             print("\nCancelled.")
             return
-        message_send_join(sock, bs.convertGameBoardToString(bs.gameBoard))
+        message_send_join(sock, bs.convertGameBoardToString(bs.personalGameBoard))
         response = message_recv(sock)
         if response is None:
+            ## Got no response.
             print("The server is not hosting a joinable game")
             sock.close()
             continue
         elif response == MSG_ACCEPT:
-            ## Successfully joined
+            ## Successfully joined.
             break
         else:
+            ## Server sent some other message
             print("The requested server is hosting a game and refused your request to join game (a game may already be running)")
+            print(f"Server sent: '{response}'")
             sock.close()
             continue
-    print(f"Joined server! (response={response})")
+    print(f"Joined server!")
+    bs.setupGamePieces()
     client_loop(sock)
     sock.close()
     print("Goodbye from the game client")
