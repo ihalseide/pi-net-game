@@ -139,7 +139,35 @@ def save_address(ip: str, port: int, file_path: str = ADDRESS_FILE_PATH):
     data = f"{ip}\n{port}\n"
     stamp_file(file_path, data.encode())
 
-def client_loop(sock: socket.socket) -> None:
+def client_connect_server() -> socket.socket:
+    while True:
+        # Loop to forever keep getting server addresses to try and join.
+        try:
+            # Create socket and save a successful connection to a file
+            ip, port, sock = get_address_and_connect_socket()
+            print('INFO', ip, port, sock)
+            save_address(ip, port)
+        except (KeyboardInterrupt, EOFError):
+            print("\nCancelled.")
+            exit(1)
+        message_send_join(sock, bs.convertGameBoardToString(bs.personalGameBoard))
+        response = message_recv(sock)
+        if response is None:
+            ## Got no response, try again.
+            print("The server is not hosting a joinable game")
+            sock.close()
+            continue
+        elif response == MSG_ACCEPT:
+            ## Successfully joined.
+            return sock
+        else:
+            ## Server sent some other message
+            print("The requested server is hosting a game and refused your request to join game (a game may already be running)")
+            print(f"Server sent: '{response}'")
+            sock.close()
+            continue
+
+def client_game_loop(sock: socket.socket) -> None:
     '''
     Main client game loop to keep sending moves whenever it is this client's turn.
     '''
@@ -170,35 +198,10 @@ def client_loop(sock: socket.socket) -> None:
 
 def client_main() -> None:
     print("Welcome to the game client")
-    while True:
-        # Loop to forever keep getting server addresses to try and join.
-        try:
-            # Create socket and save a successful connection to a file
-            ip, port, sock = get_address_and_connect_socket()
-            print('INFO', ip, port, sock)
-            save_address(ip, port)
-        except (KeyboardInterrupt, EOFError):
-            print("\nCancelled.")
-            return
-        message_send_join(sock, bs.convertGameBoardToString(bs.personalGameBoard))
-        response = message_recv(sock)
-        if response is None:
-            ## Got no response.
-            print("The server is not hosting a joinable game")
-            sock.close()
-            continue
-        elif response == MSG_ACCEPT:
-            ## Successfully joined.
-            break
-        else:
-            ## Server sent some other message
-            print("The requested server is hosting a game and refused your request to join game (a game may already be running)")
-            print(f"Server sent: '{response}'")
-            sock.close()
-            continue
+    sock = client_connect_server()
     print(f"Joined server!")
     bs.setupGamePieces()
-    client_loop(sock)
+    client_game_loop(sock)
     sock.close()
     print("Goodbye from the game client")
 
