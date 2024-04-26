@@ -14,7 +14,7 @@ ADDRESS_FILE_PATH: str = "server.txt"
     
 def message_send_join(sock: socket.socket, board: str):
     '''
-    Send a [join] message to the connection.
+    Send a [join] message to the connection, with the initial board.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
     message_send(sock, f"{MSG_JOIN} {board}")
@@ -78,11 +78,6 @@ def read_file(file_path: str) -> bytes:
     with open(file_path, 'rb') as f:
         return f.read()
     
-def stamp_file(file_path: str, contents: bytes) -> int:
-    '''Overwrite a file at `file_path` with `contents`.'''
-    with open(file_path, 'wb') as f:
-        return f.write(contents)
-    
 ## Quick temporary implementation of this function.
 ## TODO: make this better.
 def display_board(board: str):
@@ -131,13 +126,6 @@ def input_port() -> int:
             print("Please enter a port number value that is less than 2^16.")
             continue
         return port_num
-    
-def save_address(ip: str, port: int, file_path: str = ADDRESS_FILE_PATH):
-    '''
-    Save a IP:port value to a fixed file.
-    '''
-    data = f"{ip}\n{port}\n"
-    stamp_file(file_path, data.encode())
 
 def client_connect_server() -> socket.socket:
     while True:
@@ -146,7 +134,6 @@ def client_connect_server() -> socket.socket:
             # Create socket and save a successful connection to a file
             ip, port, sock = get_address_and_connect_socket()
             print('INFO', ip, port, sock)
-            save_address(ip, port)
         except (KeyboardInterrupt, EOFError):
             print("\nCancelled.")
             exit(1)
