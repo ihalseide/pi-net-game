@@ -11,21 +11,10 @@ import socket
 
 ## File path of where to store a IP address and port information for a connection.
 ADDRESS_FILE_PATH: str = "server.txt"
-
-## Network message types -- based what the a message starts with (the prefix).
-## NOTE: this will change based on what we agree on for the net protocol.
-MSG_JOIN = "join" # from client to server
-MSG_MOVE = "move" # from client to server
-MSG_OUTCOME = "outcome" # from server to client
-MSG_MY_TURN = "turn" # from server to client
-MSG_ACCEPT = "accept" # from server to client
-MSG_FINISHED = "finish" # from server to client
-MSG_FINISHED_LOSE = "lose" # second part of the MSG_FINISHED message
-MSG_FINISHED_WIN = "win" # second part of the MSG_FINISHED message
     
 def message_send_join(sock: socket.socket, board: str):
     '''
-    Send a [join] message to the connection.
+    Send a [join] message to the connection, with the initial board.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
     message_send(sock, f"{MSG_JOIN} {board}")
@@ -89,11 +78,6 @@ def read_file(file_path: str) -> bytes:
     with open(file_path, 'rb') as f:
         return f.read()
     
-def stamp_file(file_path: str, contents: bytes) -> int:
-    '''Overwrite a file at `file_path` with `contents`.'''
-    with open(file_path, 'wb') as f:
-        return f.write(contents)
-    
 ## Quick temporary implementation of this function.
 ## TODO: make this better.
 def display_board(board: str):
@@ -142,15 +126,35 @@ def input_port() -> int:
             print("Please enter a port number value that is less than 2^16.")
             continue
         return port_num
-    
-def save_address(ip: str, port: int, file_path: str = ADDRESS_FILE_PATH):
-    '''
-    Save a IP:port value to a fixed file.
-    '''
-    data = f"{ip}\n{port}\n"
-    stamp_file(file_path, data.encode())
 
-def client_loop(sock: socket.socket) -> None:
+def client_connect_server() -> socket.socket:
+    while True:
+        # Loop to forever keep getting server addresses to try and join.
+        try:
+            # Create socket and save a successful connection to a file
+            ip, port, sock = get_address_and_connect_socket()
+            print('INFO', ip, port, sock)
+        except (KeyboardInterrupt, EOFError):
+            print("\nCancelled.")
+            exit(1)
+        message_send_join(sock, bs.convertGameBoardToString(bs.personalGameBoard))
+        response = message_recv(sock)
+        if response is None:
+            ## Got no response, try again.
+            print("The server is not hosting a joinable game")
+            sock.close()
+            continue
+        elif response == MSG_ACCEPT:
+            ## Successfully joined.
+            return sock
+        else:
+            ## Server sent some other message
+            print("The requested server is hosting a game and refused your request to join game (a game may already be running)")
+            print(f"Server sent: '{response}'")
+            sock.close()
+            continue
+
+def client_game_loop(sock: socket.socket) -> None:
     '''
     Main client game loop to keep sending moves whenever it is this client's turn.
     '''
@@ -181,31 +185,10 @@ def client_loop(sock: socket.socket) -> None:
 
 def client_main() -> None:
     print("Welcome to the game client")
-    while True:
-        # Loop to forever keep getting server addresses to try and join.
-        try:
-            # Create socket and save a successful connection to a file
-            ip, port, sock = get_address_and_connect_socket()
-            print('INFO', ip, port, sock)
-            save_address(ip, port)
-        except (KeyboardInterrupt, EOFError):
-            print("\nCancelled.")
-            return
-        message_send_join(sock, bs.convertGameBoardToString(bs.gameBoard))
-        response = message_recv(sock)
-        if response is None:
-            print("The server is not hosting a joinable game")
-            sock.close()
-            continue
-        elif response == MSG_ACCEPT:
-            ## Successfully joined
-            break
-        else:
-            print("The requested server is hosting a game and refused your request to join game (a game may already be running)")
-            sock.close()
-            continue
-    print(f"Joined server! (response={response})")
-    client_loop(sock)
+    sock = client_connect_server()
+    print(f"Joined server!")
+    bs.setupGamePieces()
+    client_game_loop(sock)
     sock.close()
     print("Goodbye from the game client")
 
