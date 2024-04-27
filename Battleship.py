@@ -151,7 +151,7 @@ def setupGamePieces(personalGameBoard, hitMissBoard):
     front = ""
     back = ""
 
-    printGameBoard()
+    print(createPrintableGameBoard)
     while not isValidMove(userInput) or not isValidBoat(front, back, 5):
         print("Choose start and end points for your CARRIER (5 pegs)")
         userInput = input("Enter location of the bow (front) of the boat: ")
@@ -159,7 +159,7 @@ def setupGamePieces(personalGameBoard, hitMissBoard):
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
     placeShip(front, back, 5, personalGameBoard, hitMissBoard)
-    printGameBoard()
+    print(createPrintableGameBoard)
     front = ""
     back = ""
 
@@ -170,7 +170,7 @@ def setupGamePieces(personalGameBoard, hitMissBoard):
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
     placeShip(front, back, 4, personalGameBoard, hitMissBoard)
-    printGameBoard()
+    print(createPrintableGameBoard)
     front = ""
     back = ""
 
@@ -181,7 +181,7 @@ def setupGamePieces(personalGameBoard, hitMissBoard):
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
     placeShip(front, back, 3, personalGameBoard, hitMissBoard)
-    printGameBoard()
+    print(createPrintableGameBoard)
     front = ""
     back = ""
 
@@ -192,7 +192,7 @@ def setupGamePieces(personalGameBoard, hitMissBoard):
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
     placeShip(front, back, 3, personalGameBoard, hitMissBoard, monospace_digit_three)
-    printGameBoard()
+    print(createPrintableGameBoard)
     front = ""
     back = ""
 
@@ -203,7 +203,7 @@ def setupGamePieces(personalGameBoard, hitMissBoard):
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
     placeShip(front, back, 2, personalGameBoard, hitMissBoard)
-    printGameBoard()
+    print(createPrintableGameBoard)
 
     return "Let the game begin!"
 
@@ -220,6 +220,14 @@ def isValidMove(move):
     if not bool and move != "":
         print("Invalid location")
     return bool
+
+def returnMoveIndex(move) :
+    if (isValidMove(move)):
+        if len(move) == 2:
+            moveIndex = ((ord(move[0].upper()) - 65) * 10) + (int(move[1]) - 1)
+        else:
+            moveIndex = ((ord(move[0].upper()) - 65) * 10) + 9 # Case that you chose 10
+    return moveIndex
 
 # makeMove returns the original move
 def makeMove(move, gameBoard, hitMissBoard, charType = 'X'):
