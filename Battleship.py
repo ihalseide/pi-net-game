@@ -12,7 +12,7 @@ sampleBoardString = "555550000044440000003330000000" + monospace_digit_three + m
 
 # Game setup functions
 
-def processEnemyMove(enemyMove):
+def processEnemyMove(enemyMove, personalGameBoard):
     if isValidMove(enemyMove):
         if len(enemyMove) == 2:
             moveIndex = ((ord(enemyMove[0].upper()) - 65) * 10) + (int(enemyMove[1]) - 1)
@@ -23,7 +23,7 @@ def processEnemyMove(enemyMove):
             updatePersonalBoatLog(personalGameBoard[moveIndex]) # Parameter tells us which boat was hit
             isGameOver(personalBoatLog)
 
-def updatePersonalBoatLog(charType):
+def updatePersonalBoatLog(charType, personalBoatLog):
     if charType == '2':
         personalBoatLog[0] -= 1
 
@@ -38,33 +38,43 @@ def updatePersonalBoatLog(charType):
 
     elif charType == '5':
         personalBoatLog[4] -= 1
+    return personalBoatLog
 
 
 def generateEnemyGameBoard(gameBoardString):
+    enemyGameBoard = [0] * 100
     if len(gameBoardString) == 100:
         for index, num in enumerate(gameBoardString):
             enemyGameBoard[index] = num
+    return enemyGameBoard
 
 # This function is used to convert your personal game board to a string which can be sent to your opponent
 def convertGameBoardToString(gameBoard):
     return ''.join(map(str, gameBoard))
 
-# This function is for testing purposes only
-def printEnemyGameBoard():
-    print('=' * 41)
-    for i in range(0, len(enemyGameBoard), 10):
-        print(' '.join(map(str, enemyGameBoard[i:i+10])))
 
-def printGameBoard():
-    print('=' * 55)
-    print('        Your Board        |            Hits/Misses')
-    print("   " + ' '.join(str(i) for i in range(1, 11)) + '   |       ' + ' '.join(str(i) for i in range(1, 11)))
+# def printGameBoard():
+#     print('=' * 55)
+#     print('        Your Board        |            Hits/Misses')
+#     print("   " + ' '.join(str(i) for i in range(1, 11)) + '   |       ' + ' '.join(str(i) for i in range(1, 11)))
+#     for i in range(0, len(personalGameBoard), 10):
+#         j = int(i / 10)
+#         leftCol = ' '.join(map(str, personalGameBoard[i:i+10]))
+#         rightCol = ' '.join(map(str, hitMissBoard[i:i+10]))
+#         print(f"{chr(65 + j)}  {leftCol}    |    {chr(65 + j)}  {rightCol}")
+
+def createPrintableGameBoard(personalGameBoard, hitMissBoard):
+    game_board_str = '=' * 55 + '\n'
+    game_board_str += '        Your Board        |            Hits/Misses\n'
+    game_board_str += "   " + ' '.join(str(i) for i in range(1, 11)) + '   |       ' + ' '.join(str(i) for i in range(1, 11)) + '\n'
+    
     for i in range(0, len(personalGameBoard), 10):
         j = int(i / 10)
-        leftCol = ' '.join(map(str, personalGameBoard[i:i+10]))
-        rightCol = ' '.join(map(str, hitMissBoard[i:i+10]))
-        print(f"{chr(65 + j)}  {leftCol}    |    {chr(65 + j)}  {rightCol}")
-
+        left_col = ' '.join(map(str, personalGameBoard[i:i+10]))
+        right_col = ' '.join(map(str, hitMissBoard[i:i+10]))
+        game_board_str += f"{chr(65 + j)}  {left_col}    |    {chr(65 + j)}  {right_col}\n"
+    
+    return game_board_str
 # Initial boat placement functions
 
 def isBoatHorizontal(front, back):
@@ -107,7 +117,7 @@ def isValidBoat(front, back, boatLength):
         print("Invalid boat")
     return valid
 
-def placeShip(front, back, boatLength, charType = None):
+def placeShip(front, back, boatLength, personalGameBoard, hitMissBoard, charType = None):
     if charType == None:
         charType = boatLength
     
@@ -122,7 +132,7 @@ def placeShip(front, back, boatLength, charType = None):
                 frontNum = backNum
                 backNum = temp
             for i in range(0, (backNum + 1) - frontNum):
-                makeMove(front[0] + str(i + frontNum), personalGameBoard, charType)
+                makeMove(front[0] + str(i + frontNum), personalGameBoard, hitMissBoard, charType)
         else:
             # Boat is vertical
             frontChar = front[0]
@@ -133,22 +143,23 @@ def placeShip(front, back, boatLength, charType = None):
                 frontChar = backChar
                 backChar = temp
             for i in range(0, (ord(backChar) - 64) - (ord(frontChar) - 65)):
-                makeMove(chr(ord(frontChar) + i) + str(getMoveNumber(front)), personalGameBoard, charType)
+                makeMove(chr(ord(frontChar) + i) + str(getMoveNumber(front)), personalGameBoard, hitMissBoard, charType)
+    return personalGameBoard
 
-def setupGamePieces():
+def setupGamePieces(personalGameBoard, hitMissBoard):
     userInput = ""
     front = ""
     back = ""
 
-    printGameBoard()
+    print(createPrintableGameBoard)
     while not isValidMove(userInput) or not isValidBoat(front, back, 5):
         print("Choose start and end points for your CARRIER (5 pegs)")
         userInput = input("Enter location of the bow (front) of the boat: ")
         front = userInput
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
-    placeShip(front, back, 5)
-    printGameBoard()
+    placeShip(front, back, 5, personalGameBoard, hitMissBoard)
+    print(createPrintableGameBoard)
     front = ""
     back = ""
 
@@ -158,8 +169,8 @@ def setupGamePieces():
         front = userInput
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
-    placeShip(front, back, 4)
-    printGameBoard()
+    placeShip(front, back, 4, personalGameBoard, hitMissBoard)
+    print(createPrintableGameBoard)
     front = ""
     back = ""
 
@@ -169,8 +180,8 @@ def setupGamePieces():
         front = userInput
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
-    placeShip(front, back, 3)
-    printGameBoard()
+    placeShip(front, back, 3, personalGameBoard, hitMissBoard)
+    print(createPrintableGameBoard)
     front = ""
     back = ""
 
@@ -180,8 +191,8 @@ def setupGamePieces():
         front = userInput
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
-    placeShip(front, back, 3, monospace_digit_three)
-    printGameBoard()
+    placeShip(front, back, 3, personalGameBoard, hitMissBoard, monospace_digit_three)
+    print(createPrintableGameBoard)
     front = ""
     back = ""
 
@@ -191,10 +202,10 @@ def setupGamePieces():
         front = userInput
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
-    placeShip(front, back, 2)
-    printGameBoard()
+    placeShip(front, back, 2, personalGameBoard, hitMissBoard)
+    print(createPrintableGameBoard)
 
-    print("Let the game begin!")
+    return "Let the game begin!"
 
 # Functions for making a move
 def isCharAthruJ(char):
@@ -210,30 +221,41 @@ def isValidMove(move):
         print("Invalid location")
     return bool
 
+def returnMoveIndex(move) :
+    if (isValidMove(move)):
+        if len(move) == 2:
+            moveIndex = ((ord(move[0].upper()) - 65) * 10) + (int(move[1]) - 1)
+        else:
+            moveIndex = ((ord(move[0].upper()) - 65) * 10) + 9 # Case that you chose 10
+    return moveIndex
+
 # makeMove returns the original move
-def makeMove(move, gameBoard, charType = 'X'):
+def makeMove(move, gameBoard, hitMissBoard, charType = 'X'):
     if isValidMove(move):
         if len(move) == 2:
             moveIndex = ((ord(move[0].upper()) - 65) * 10) + (int(move[1]) - 1)
         else:
             moveIndex = ((ord(move[0].upper()) - 65) * 10) + 9 # Case that you chose 10
 
-        if gameBoard[moveIndex] != '0':
-            updateBoatLog(gameBoard[moveIndex]) # Parameter tells us which boat was hit
-            hitMissBoard[moveIndex] = charType
-            isGameOver(personalBoatLog, enemyBoatLog)
-        else:
-            hitMissBoard[moveIndex] = 'M'
-        
         if charType != 'X':
             # Used during ship setup
-            personalGameBoard[moveIndex] = charType
+            gameBoard[moveIndex] = charType
+            return
+
+        if gameBoard[moveIndex] != '0':
+            hitMissBoard[moveIndex] = charType
+            
+        else:
+            hitMissBoard[moveIndex] = 'M'
+            
+    
     else:
-        print(move, " Is an invalid Move")
-    return move
+        response = move + " Is an invalid move"
+        return response
+    return moveIndex
 
 # (order: destroyer, submarine, cruiser, battleship, carrier)
-def updateBoatLog(charType):
+def updateBoatLog(charType, enemyBoatLog):
     if charType == '2':
         enemyBoatLog[0] -= 1
         if (enemyBoatLog[0] == 0):
@@ -267,7 +289,7 @@ def updateBoatLog(charType):
     else:
         print("Enemy: Miss!")
 
-def isGameOver(personalLog, enemyLog):
+def isGameOver(personalBoatLog, enemyBoatLog):
     gameOver = False
     enemyWon = True
     youWon = True
@@ -281,39 +303,35 @@ def isGameOver(personalLog, enemyLog):
             youWon = False
 
     if youWon:
-        print("Enemy: Well played")
-        print("YOU WIN!")
         gameOver = True
     elif enemyWon:
-        print("Enemy: That was too easy")
-        print("YOU LOSE")
         gameOver = True
 
     return gameOver
 
 # example game play, albeit for only one person
-def playGame(enemyBoardString):
-    generateEnemyGameBoard(enemyBoardString)
+def playGame(enemyBoardString, personalGameBoard, personalBoatLog, enemyBoatLog):
+    enemyGameBoard = generateEnemyGameBoard(enemyBoardString)
     # you would then call processEnemyMove()
 
-    setupGamePieces()
+    # print(setupGamePieces(personalGameBoard, hitMissBoard))
 
     while not isGameOver(personalBoatLog, enemyBoatLog):
         userInput = input("Make your move: ")
-        makeMove(userInput, enemyGameBoard)
-        printGameBoard()
+        moveIndex = makeMove(userInput, enemyGameBoard, hitMissBoard)
+        print(createPrintableGameBoard(personalGameBoard, hitMissBoard))
+        updateBoatLog(enemyGameBoard[moveIndex], enemyBoatLog)
 
 
 
 
 # Testing
 if __name__ == '__main__':
-    playGame(sampleBoardString)
+    playGame(sampleBoardString, personalGameBoard, personalBoatLog, enemyBoatLog)
 
     # printEnemyGameBoard()
     # printGameBoard()
 
-    # printGameBoard(makeMove('J10', gameBoard))
 
     # print(convertGameBoardToString(gameBoard))
     # print(isValidBoat('a1', 'a5', 5)) # True - Check horizontal
