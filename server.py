@@ -8,7 +8,10 @@ import socket
 import Battleship as bs
 from NetMessage import *
 
-p1_sock, p1_addr, p1_board, p1_board_2, p2_sock, p2_addr, p2_board, p2_board_2 = None, None, None, None, None, None, None, None
+p1_sock, p1_addr, p1_board, p1_board_hm, p2_sock, p2_addr, p2_board, p2_board_hm = None, None, None, None, None, None, None, None
+p1_boatLog = [2, 3, 3, 4, 5] 
+p2_boatLog = [2, 3, 3, 4, 5]
+sock = None
 
 def accept_connection(client_sock: socket.socket):
     '''
@@ -44,14 +47,18 @@ def player_turn(player: socket.socket):
         move = get_move(player)
         print("Move was: " + move)
         if bs.isValidMove(move):
-            # TODO: do something with the move, incl. telling the other player what it was
-            # for now just says that it missed because there isn't a good way for the server side to deal with the library's methods
-            message_send(player, f"{MSG_OUTCOME} miss")
+            move_ind = bs.returnMoveIndex(move)
+            target = bs.enemyGameBoard[move_ind]
+            if target != '0' and target != 'X':
+                bs.updatePersonalBoatLog(target, bs.enemyBoatLog)
+                enemyGameBoard[move_ind] = 'X'
+                message_send(player, f"{MSG_OUTCOME} hit")
+            else: message_send(player, f"{MSG_OUTCOME} miss")
         else:
-            message_send(player, f"{MSG_OUTCOME} invalid")
+            player_turn(player)
     except Exception as e:
-        # TODO: handle a player disconnected gracefully, or at least semi-gracefully here
-        pass 
+        print(e)
+        main()
 
 def get_player(sock: socket.socket):
     '''
@@ -68,7 +75,7 @@ def get_player(sock: socket.socket):
             return client_sock, client_addr, m
         except Exception as e:
             print(e)
-            return None
+            return None, None, None
 
 def get_player_empty_board(sock: socket.socket):
     '''
@@ -88,42 +95,62 @@ def get_player_empty_board(sock: socket.socket):
 def game_loop(p1: socket.socket,p2: socket.socket):
     '''
     The basic game loop, one player goes then the other, alternating.
-    TODO: make this more robust for if a client disconnects, should probably return to starting state (looking for players)
     TODO: Should there be a game end condition in the game api, use that to end the game when the time comes
     '''
     turn: bool = True
     while True:
         if turn:
-            personalGameBoard = p1_board
-            enemyGameBoard = p2_board
+            bs.personalGameBoard = p1_board
+            bs.enemyGameBoard = p2_board
+            bs.personalBoatLog = p1_boatLog
+            bs.enemyBoatLog = p2_boatLog
             player_turn(p1)
+            if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
+                if (lost(enemyBoatLog)):
+                    message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
+                    message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
+                    main()
         else:
-            personalGameBoard = p2_board
-            enemyGameBoard = p1_board
+            bs.personalGameBoard = p2_board
+            bs.enemyGameBoard = p1_board
+            bs.personalBoatLog = p2_boatLog
+            bs.enemyBoatLog = p1_boatLog
             player_turn(p2)
+            if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
+                if (lost(enemyBoatLog)):
+                    message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
+                    message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
+                    main()
         turn = not turn
 
-def recieve_board(player: socket.socket):
+def is_lost(boatLog):
+    lost = True
+    for boat in boatLog:
+        if boat != 0:
+            lost = False
+    return lost
+
+def cleanup_between():
     try:
-        board1 = message_recv(player)
-        board2 = message_recv(player)
-        print(board1, "\n", board2)
-        return board1, board2
+        p1_sock.close()
     except Exception as e:
         print(e)
-        return None, None
+    try: 
+        p2_sock.close()
+    except Exception as e:
+        print(e)
 
 def main() -> None:
-    sock = socket.create_server(('localhost', 7777), family=socket.AF_INET, backlog=1)
-    global p1_sock, p1_addr, p1_board, p1_board_2, p2_sock, p2_addr, p2_board, p2_board_2
-    """ Handle player joining once the client sends the board state
-    while p1_board_2 is None:
-        p1_sock, p1_addr, p1_board = get_player_empty_board(sock)
-        p1_board, p1_board_2 = recieve_board(p1_sock)
-    while p2_board_2 is None:
-        p2_sock, p2_addr, p2_board = get_player_empty_board(sock)
-        p2_board, p2_board_2 = recieve_board(p2_sock)
-    """
+    global sock
+    if sock == None:
+        sock = socket.create_server(('localhost', 7777), family=socket.AF_INET, backlog=1)
+    else:
+        cleanup_between()
+    global p1_sock, p1_addr, p1_board, p2_sock, p2_addr, p2_board, p1_boatLog, p2_boatLog
+    p1_sock = None
+    p2_sock = None
+    p1_boatLog = [2, 3, 3, 4, 5] 
+    p2_boatLog = [2, 3, 3, 4, 5] 
     while p1_sock is None:
         p1_sock, p1_addr, p1_board = get_player_empty_board(sock)
     while p2_sock is None:
