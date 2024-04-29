@@ -9,9 +9,6 @@ import Battleship as bs
 from NetMessage import *
 import socket
 
-## File path of where to store a IP address and port information for a connection.
-ADDRESS_FILE_PATH: str = "server.txt"
-
 ## Unoccupied tile value.
 UNOCCUPIED = '0'
 
