@@ -10,7 +10,8 @@ from NetMessage import *
 import socket
 
 ## Unoccupied tile value.
-UNOCCUPIED = '0'
+PRESENT_UNOCCUPIED = '~'
+LIBRARY_UNOCCUPIED = '0'
 
 global_logging = False
 
@@ -132,9 +133,37 @@ def input_port() -> int:
             print("Please enter a port number value that is less than 2^16.")
             continue
         return port_num
+    
+def game_connect(board_str: str, server_ip: str, port: int, timeout: float) -> socket.socket | None:
+    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
+    sock.settimeout(timeout)
+    try:
+        sock.connect((server_ip, port))
+        message_send_join(sock, board_str)
+        response = message_recv(sock, global_logging)
+        if response == MSG_ACCEPT:
+            return sock
+        else:
+            print(f"Could not connect, server sent: \"{response}\"")
+    except:
+        sock.close()
+    return None
 
-def client_connect_server(board: list[str]) -> socket.socket:
+'''
+def client_scan_and_connect_server(board: list[str]) -> socket.socket | None:
     board_str = ''.join(board)
+    port = 7777
+    timeout = 0.3
+    print(f"Looking for local server on port {port}...")
+    for i in range(1, 255):
+        server_ip = f"192.168.1.{i}"
+        print(server_ip)
+        if sock := game_connect(board_str, server_ip, port, timeout):
+            return sock
+    return None
+'''
+
+def client_connect_server_manual(board_str: str) -> socket.socket | None:
     while True:
         # Loop to forever keep getting server addresses to try and join.
         try:
@@ -216,7 +245,7 @@ def prompt_valid_board_location(board: list[str]) -> int:
         except ValueError:
             print("\rCannot start placing a boat there: invalid location")
             continue
-        if board[index] != UNOCCUPIED:
+        if board[index] != PRESENT_UNOCCUPIED:
             print("\rCannot start placing a boat there: spot out of range or already occupied")
             continue
         return index
@@ -274,7 +303,7 @@ def prompt_valid_board_direction(board: list[str], front_loc: int, length: int) 
         for i in range(length):
             row = row_0 + i * delta[0]
             col = col_0 + i * delta[1]
-            if board[row_col_to_index(row, col)] != UNOCCUPIED:
+            if board[row_col_to_index(row, col)] != PRESENT_UNOCCUPIED:
                 valid = False
                 coord = row_col_to_coord(row, col)
                 direction = direction_name(d_in)
@@ -292,7 +321,7 @@ def set_ship_squares(board: list[str], front_loc: int, direction: str, length: i
         board[row_col_to_index(row, col)] = ship_value
 
 def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> list[str]:
-    board = [ UNOCCUPIED for i in range(100) ]
+    board = [ PRESENT_UNOCCUPIED for i in range(100) ]
     dummy_hit_miss = [ ' ' for i in range(100) ]
     for (ship_length, ship_name, ship_value) in ships_info_tuple:
         print_my_board(board)
@@ -311,6 +340,9 @@ def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> li
     print(bs.createPrintableGameBoard(board, dummy_hit_miss))
     return board
 
+def visual_board_to_library_board(board: list[str]):
+    return ''.join([ LIBRARY_UNOCCUPIED if x == PRESENT_UNOCCUPIED else x for x in board ])
+
 def client_main() -> None:
     print("Welcome to the BAT*TLE*SHIP game client")
     try:
@@ -318,10 +350,14 @@ def client_main() -> None:
     except (KeyboardInterrupt, EOFError):
         print("Board set-up cancelled, so the game will not continue.")
         return
-    sock = client_connect_server(board)
-    print(f"Successfully joined the game server!")
-    client_game_loop(sock, board)
-    sock.close()
+    string_board = visual_board_to_library_board(board)
+    sock = client_connect_server_manual(string_board)
+    if sock is None:
+        print("Could not connect to a server")
+    else:
+        print(f"Successfully joined the game server!")
+        client_game_loop(sock, board)
+        sock.close()
 
 if __name__ == '__main__':
     client_main()
