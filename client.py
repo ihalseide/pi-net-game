@@ -12,6 +12,8 @@ import socket
 ## Unoccupied tile value.
 UNOCCUPIED = '0'
 
+global_logging = False
+
 # Collection of tuples where each entry is:
 # (length, name, character) for the ship
 STANDARD_SHIPS = (
@@ -23,6 +25,7 @@ STANDARD_SHIPS = (
 )
 
 def print_my_board(personalGameBoard: list[str]) -> None:
+    # NOTE: a modified version from code taken from the `Battleship.py` file
     game_board_str = '=' * 22 + '\n'
     game_board_str += '        Your Board        |\n'
     game_board_str += "   " + ' '.join(str(i) for i in range(1, 11)) + '   |\n'
@@ -39,7 +42,7 @@ def message_send_join(sock: socket.socket, board: str):
     Send a [join] message to the connection, with the initial board.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
-    message_send(sock, f"{MSG_JOIN} {board}")
+    message_send(sock, f"{MSG_JOIN} {board}", global_logging)
 
 def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
     '''Get a user address until a connection can be established'''
@@ -83,7 +86,7 @@ def send_move(sock: socket.socket, move: str):
     Send a game client move to be made to the server socket.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
-    message_send(sock, f"{MSG_MOVE} {move}")
+    message_send(sock, f"{MSG_MOVE} {move}", global_logging)
 
 def get_user_move() -> str:
     '''
@@ -99,25 +102,6 @@ def read_file(file_path: str) -> bytes:
     '''Read and return all of the contents of the file at `file_path`.'''
     with open(file_path, 'rb') as f:
         return f.read()
-    
-## Quick temporary implementation of this function.
-## TODO: make this better.
-def display_board(board: str):
-    lines = board.split()
-    assert(len(lines) == 10)
-    print(end=" ")
-    for i in range(10):
-        print(end=f"{1+i: >3}")
-    print()
-    print('-'*32)
-    for i in range(10):
-        line = lines[i]
-        assert(len(line) == 10)
-        letter = "ABCDEFGHIJ"[i]
-        print(end=f"{letter}| ")
-        for j in range(10):
-            print(line[j], end='  ')
-        print()
 
 def input_IP() -> str:
     '''
@@ -161,7 +145,7 @@ def client_connect_server(board: list[str]) -> socket.socket:
             print("\nCancelled.")
             exit(1)
         message_send_join(sock, board_str)
-        response = message_recv(sock)
+        response = message_recv(sock, global_logging)
         if response is None:
             ## Got no response, try again.
             print("The server is not hosting a joinable game")
@@ -185,7 +169,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
     move_index = -1
     while True:
         print("Waiting for your turn...")
-        msg = message_recv(sock)
+        msg = message_recv(sock, global_logging)
         if msg == MSG_MY_TURN:
             ## Server sent that it is our turn to go
             print(bs.createPrintableGameBoard(board, hit_miss_board))
