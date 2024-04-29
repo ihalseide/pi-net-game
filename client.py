@@ -166,6 +166,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
     Main client game loop to keep sending moves whenever it is this client's turn.
     '''
     hit_miss_board = [ '~' for i in range(100) ]
+    move_coord = '<invalid>'
     move_index = -1
     while True:
         print("Waiting for your turn...")
@@ -173,18 +174,21 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
         if msg == MSG_MY_TURN:
             ## Server sent that it is our turn to go
             print(bs.createPrintableGameBoard(board, hit_miss_board))
-            move = get_user_move()
-            move_index = bs.returnMoveIndex(move)
-            print(f"move: {move}, index: {move_index}")
-            send_move(sock, move)
+            move_coord = get_user_move()
+            move_index = bs.returnMoveIndex(move_coord)
+            print(f"move: {move_coord}, index: {move_index}")
+            send_move(sock, move_coord)
             # get response in next loop (hit/miss)
             continue
         elif msg == f"{MSG_OUTCOME} hit":
             ## Previously sent move was a hit
+            assert(move_index >= 0)
+            print(f"Your guess '{move_coord}' was a HIT!")
             hit_miss_board[move_index] = 'X'
         elif msg == f"{MSG_OUTCOME} miss":
             ## Previously sent move was a miss
             assert(move_index >= 0)
+            print(f"Your guess '{move_coord}' was a MISS!")
             hit_miss_board[move_index] = '.'
         elif msg.startswith(MSG_FINISHED):
             ## Server is ending/finishing the game
@@ -308,17 +312,16 @@ def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> li
     return board
 
 def client_main() -> None:
-    print("Welcome to the game client")
+    print("Welcome to the BAT*TLE*SHIP game client")
     try:
         board = player_setup_board(STANDARD_SHIPS)
     except (KeyboardInterrupt, EOFError):
         print("Board set-up cancelled, so the game will not continue.")
         return
     sock = client_connect_server(board)
-    print(f"Joined server!")
+    print(f"Successfully joined the game server!")
     client_game_loop(sock, board)
     sock.close()
-    print("Goodbye from the game client")
 
 if __name__ == '__main__':
     client_main()
