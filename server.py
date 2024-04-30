@@ -51,7 +51,7 @@ def player_turn(player: socket.socket):
             target = bs.enemyGameBoard[move_ind]
             if target != '0' and target != 'X':
                 bs.updatePersonalBoatLog(target, bs.enemyBoatLog)
-                enemyGameBoard[move_ind] = 'X'
+                bs.enemyGameBoard[move_ind] = 'X'
                 message_send(player, f"{MSG_OUTCOME} hit")
             else: message_send(player, f"{MSG_OUTCOME} miss")
         else:
@@ -87,7 +87,7 @@ def get_player_empty_board(sock: socket.socket):
         client_sock, client_addr, m = get_player(sock)
         if (client_sock is None or client_addr is None or m is None):
             return None, None, None
-        board_received = m[len(MSG_JOIN)+1:]
+        board_received = list(m[len(MSG_JOIN)+1:]) 
         print(board_received)
         accept_connection(client_sock)
         return client_sock, client_addr, board_received
