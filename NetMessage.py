@@ -27,12 +27,21 @@ def message_send(sock: socket.socket, message: str, do_log=True):
     - where the length field is a fixed-length number string (like "00009")
     - where the data field is a string with length given by converting the length field to an integer
     '''
-    length = len(message)
+
+    message_bytes = message.encode()
+    length = len(message_bytes)
+
     assert(LENGTH_PREFIX_LENGTH == 5) # If this assertion is incorrect, then update this line and the next one.
     length_field = "{:0>5}".format(length)
-    if do_log: print(f'(message_send)"{length_field}{message}"')
-    sock.sendall(length_field.encode())
-    sock.sendall(message.encode())
+    
+    length_bytes = length_field.encode()
+    assert(len(length_bytes) == LENGTH_PREFIX_LENGTH)
+
+    if do_log:
+        print(f'(message_send)"{length_field}{message}"')
+
+    sock.sendall(length_bytes)
+    sock.sendall(message_bytes)
 
 def message_recv(sock: socket.socket, do_log=True) -> str:
     '''
@@ -42,29 +51,24 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
     - where the length field is a fixed-length number string (like "00009")
     - where the data field is a string with length given by converting the length field to an integer
     '''
-    if do_log: 
-        print(f"(message_recv {LENGTH_PREFIX_LENGTH})...")
-    try:
-        length_field = sock.recv(LENGTH_PREFIX_LENGTH, socket.MSG_WAITALL)
-    except OSError:
-        raise ValueError("could not receive response from connection")
-    length_str = length_field.decode()
-    if len(length_str) == 0:
-        raise OSError("connection is closed")
-    if (l := len(length_str)) != LENGTH_PREFIX_LENGTH:
+    length_field = sock.recv(LENGTH_PREFIX_LENGTH, socket.MSG_WAITALL)
+    if not length_field:
+        raise ValueError("connection is closed")
+    if (l := len(length_field)) != LENGTH_PREFIX_LENGTH:
         raise ValueError(f"the connection sent a length field which itself has an unexpected length of {l}")
+    length_str = length_field.decode()
+    if do_log:
+        print(f"message_receive(): length_str = '{length_str}'")
     try:
         length_num = int(length_str)
     except ValueError:
-        raise ValueError("the connection sent a length field which could not be converted to an integer value")
+        raise ValueError(f"the connection sent a length field which could not be converted to an integer value: \"{length_str}\"")
     if length_num <= 0:
         raise ValueError(f"the connection sent a non-positive integer in the length field: {length_num}")
-    if do_log: 
-        print(f"(message_recv){length_str}...")
-    try:
-        data_field = sock.recv(length_num, socket.MSG_WAITALL)
-    except OSError:
-        raise ValueError("could not receive the full data response from the connection")
+    data_field = sock.recv(length_num, socket.MSG_WAITALL)
     if (actual_length := len(data_field)) != length_num:
         raise ValueError(f"connection indicated it would send {length_num} bytes, but {actual_length} bytes was actually received")
-    return data_field.decode()
+    result = data_field.decode()
+    if do_log:
+        print(f"message_receive(): data = '{result}'")
+    return result

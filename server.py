@@ -51,7 +51,7 @@ def player_turn(player: socket.socket):
             target = bs.enemyGameBoard[move_ind]
             if target != '0' and target != 'X':
                 bs.updatePersonalBoatLog(target, bs.enemyBoatLog)
-                enemyGameBoard[move_ind] = 'X'
+                bs.enemyGameBoard[move_ind] = 'X'
                 message_send(player, f"{MSG_OUTCOME} hit")
             else: message_send(player, f"{MSG_OUTCOME} miss")
         else:
@@ -87,7 +87,7 @@ def get_player_empty_board(sock: socket.socket):
         client_sock, client_addr, m = get_player(sock)
         if (client_sock is None or client_addr is None or m is None):
             return None, None, None
-        board_received = m[len(MSG_JOIN)+1:]
+        board_received = list(m[len(MSG_JOIN)+1:]) 
         print(board_received)
         accept_connection(client_sock)
         return client_sock, client_addr, board_received
@@ -97,6 +97,8 @@ def game_loop(p1: socket.socket,p2: socket.socket):
     The basic game loop, one player goes then the other, alternating.
     TODO: Should there be a game end condition in the game api, use that to end the game when the time comes
     '''
+    assert(p1_board is not None)
+    assert(p2_board is not None)
     turn: bool = True
     while True:
         if turn:
@@ -106,7 +108,7 @@ def game_loop(p1: socket.socket,p2: socket.socket):
             bs.enemyBoatLog = p2_boatLog
             player_turn(p1)
             if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
-                if (lost(enemyBoatLog)):
+                if (is_lost(bs.enemyBoatLog)):
                     message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
                     message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
                     main()
@@ -117,7 +119,7 @@ def game_loop(p1: socket.socket,p2: socket.socket):
             bs.enemyBoatLog = p1_boatLog
             player_turn(p2)
             if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
-                if (lost(enemyBoatLog)):
+                if (is_lost(bs.enemyBoatLog)):
                     message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
                     message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
                     main()
@@ -147,6 +149,7 @@ def main() -> None:
     else:
         cleanup_between()
     global p1_sock, p1_addr, p1_board, p2_sock, p2_addr, p2_board, p1_boatLog, p2_boatLog
+    assert(sock is not None)
     p1_sock = None
     p2_sock = None
     p1_boatLog = [2, 3, 3, 4, 5] 
