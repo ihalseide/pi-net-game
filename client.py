@@ -38,12 +38,13 @@ def print_my_board(personalGameBoard: list[str]) -> None:
     
     print(game_board_str)
     
-def message_send_join(sock: socket.socket, board: str):
+def message_send_join(sock: socket.socket, board: list[str]):
     '''
     Send a [join] message to the connection, with the initial board.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
-    message_send(sock, f"{MSG_JOIN} {board}", global_logging)
+    board_str = visual_board_to_library_board(board)
+    message_send(sock, f"{MSG_JOIN} {board_str}", global_logging)
 
 def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
     '''Get a user address until a connection can be established'''
@@ -71,7 +72,7 @@ def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
             continue
         ## Save ip address for next time and get port.
         saved_server_ip = server_ip
-        port = input_port()
+        port = 7777 #input_port()
         try:
             sock = socket.socket(family=family, type=kind, proto=0)
             sock.connect((server_ip, port))
@@ -134,12 +135,12 @@ def input_port() -> int:
             continue
         return port_num
     
-def game_connect(board_str: str, server_ip: str, port: int, timeout: float) -> socket.socket | None:
+def game_connect(board: list[str], server_ip: str, port: int, timeout: float) -> socket.socket | None:
     sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
     sock.settimeout(timeout)
     try:
         sock.connect((server_ip, port))
-        message_send_join(sock, board_str)
+        message_send_join(sock, board)
         response = message_recv(sock, global_logging)
         if response == MSG_ACCEPT:
             return sock
@@ -163,7 +164,7 @@ def client_scan_and_connect_server(board: list[str]) -> socket.socket | None:
     return None
 '''
 
-def client_connect_server_manual(board_str: str) -> socket.socket | None:
+def client_connect_server_manual(board: list[str]) -> socket.socket | None:
     while True:
         # Loop to forever keep getting server addresses to try and join.
         try:
@@ -172,8 +173,8 @@ def client_connect_server_manual(board_str: str) -> socket.socket | None:
             print('INFO', ip, port, sock)
         except (KeyboardInterrupt, EOFError):
             print("\nCancelled.")
-            exit(1)
-        message_send_join(sock, board_str)
+            return None
+        message_send_join(sock, board)
         response = message_recv(sock, global_logging)
         if response is None:
             ## Got no response, try again.
@@ -221,7 +222,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
             hit_miss_board[move_index] = '.'
         elif msg.startswith(MSG_FINISHED):
             ## Server is ending/finishing the game
-            ## Message is: "finish " followed by the outcome
+            ## Message is: "<finish> <outcome>"
             the_rest = msg.split(maxsplit=1)[1]
             if the_rest == MSG_FINISHED_LOSE:
                 print("Game over, you lost.")
@@ -341,6 +342,8 @@ def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> li
     return board
 
 def visual_board_to_library_board(board: list[str]):
+    if len(board) != 100:
+        raise ValueError(f"board has {len(board)} slots instead of 100")
     return ''.join([ LIBRARY_UNOCCUPIED if x == PRESENT_UNOCCUPIED else x for x in board ])
 
 def client_main() -> None:
@@ -350,10 +353,9 @@ def client_main() -> None:
     except (KeyboardInterrupt, EOFError):
         print("Board set-up cancelled, so the game will not continue.")
         return
-    string_board = visual_board_to_library_board(board)
-    sock = client_connect_server_manual(string_board)
+    sock = client_connect_server_manual(board)
     if sock is None:
-        print("Could not connect to a server")
+        print("Did not connect to a server")
     else:
         print(f"Successfully joined the game server!")
         client_game_loop(sock, board)
