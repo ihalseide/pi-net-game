@@ -94,11 +94,7 @@ def get_user_move() -> str:
     '''
     Ask the local player for a square to try to hit on the opponent's board.
     '''
-    while True:
-        ans = input("Enter your move (a square to guess): ").strip().lower()
-        if not bs.isValidMove(ans):
-            print(f"Try again, \"{ans}\" is not a valid move.")
-        return ans
+    return input("Enter your move (a square to guess): ").strip().lower()
 
 def read_file(file_path: str) -> bytes:
     '''Read and return all of the contents of the file at `file_path`.'''
@@ -198,40 +194,56 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
     hit_miss_board = [ '~' for i in range(100) ]
     move_coord = '<invalid>'
     move_index = -1
+    print(bs.createPrintableGameBoard(board, hit_miss_board))
     while True:
         print("Waiting for your turn...")
         msg = message_recv(sock, global_logging)
         if msg == MSG_MY_TURN:
             ## Server sent that it is our turn to go
-            print(bs.createPrintableGameBoard(board, hit_miss_board))
-            move_coord = get_user_move()
-            move_index = bs.returnMoveIndex(move_coord)
+            while True:
+                # Get valid move
+                try:
+                    move_coord = get_user_move()
+                    move_index = bs.returnMoveIndex(move_coord)
+                    if hit_miss_board[move_index] in ('.', 'X'):
+                        # Already guessed
+                        print(f"You already guessed {move_coord.upper()}")
+                        continue
+                    else:
+                        break
+                except:
+                    print("Invalid move")
+                    continue
             print(f"move: {move_coord}, index: {move_index}")
             send_move(sock, move_coord)
             # get response in next loop (hit/miss)
-            continue
         elif msg == f"{MSG_OUTCOME} hit":
             ## Previously sent move was a hit
             assert(move_index >= 0)
-            print(f"Your guess '{move_coord}' was a HIT!")
+            print(f"Your guess '{move_coord.upper()}' was a HIT!")
             hit_miss_board[move_index] = 'X'
+            print(bs.createPrintableGameBoard(board, hit_miss_board))
+            print(f"Your guess '{move_coord.upper()}' was a HIT!") # yes, print this again
         elif msg == f"{MSG_OUTCOME} miss":
             ## Previously sent move was a miss
             assert(move_index >= 0)
-            print(f"Your guess '{move_coord}' was a MISS!")
+            print(f"Your guess '{move_coord.upper()}' was a MISS!")
             hit_miss_board[move_index] = '.'
+            print(bs.createPrintableGameBoard(board, hit_miss_board))
+            print(f"Your guess '{move_coord.upper()}' was a MISS!") # yes, print this again
         elif msg.startswith(MSG_FINISHED):
             ## Server is ending/finishing the game
             ## Message is: "<finish> <outcome>"
             the_rest = msg.split(maxsplit=1)[1]
             if the_rest == MSG_FINISHED_LOSE:
-                print("Game over, you lost.")
+                print("Game over: you LOST!")
             elif the_rest == MSG_FINISHED_WIN:
-                print("Game over, you")
+                print("Game over: you WON!")
                 print("Closing connection to server.")
             else:
                 print("Server is ending the game for some other reason.")
                 print(f"Server sent: '{msg}'")
+            # No more turns, done with this function!
             return
         else:
             ## Other message
