@@ -97,6 +97,8 @@ def game_loop(p1: socket.socket,p2: socket.socket):
     The basic game loop, one player goes then the other, alternating.
     TODO: Should there be a game end condition in the game api, use that to end the game when the time comes
     '''
+    assert(p1_board is not None)
+    assert(p2_board is not None)
     turn: bool = True
     while True:
         if turn:
@@ -147,6 +149,7 @@ def main() -> None:
     else:
         cleanup_between()
     global p1_sock, p1_addr, p1_board, p2_sock, p2_addr, p2_board, p1_boatLog, p2_boatLog
+    assert(sock is not None)
     p1_sock = None
     p2_sock = None
     p1_boatLog = [2, 3, 3, 4, 5] 
