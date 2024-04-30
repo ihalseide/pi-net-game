@@ -27,16 +27,21 @@ def message_send(sock: socket.socket, message: str, do_log=True):
     - where the length field is a fixed-length number string (like "00009")
     - where the data field is a string with length given by converting the length field to an integer
     '''
-    length = len(message)
+
+    message_bytes = message.encode()
+    length = len(message_bytes)
 
     assert(LENGTH_PREFIX_LENGTH == 5) # If this assertion is incorrect, then update this line and the next one.
     length_field = "{:0>5}".format(length)
+    
+    length_bytes = length_field.encode()
+    assert(len(length_bytes) == LENGTH_PREFIX_LENGTH)
 
     if do_log:
         print(f'(message_send)"{length_field}{message}"')
 
-    sock.sendall(length_field.encode())
-    sock.sendall(message.encode())
+    sock.sendall(length_bytes)
+    sock.sendall(message_bytes)
 
 def message_recv(sock: socket.socket, do_log=True) -> str:
     '''
