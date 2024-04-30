@@ -106,7 +106,7 @@ def game_loop(p1: socket.socket,p2: socket.socket):
             bs.enemyBoatLog = p2_boatLog
             player_turn(p1)
             if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
-                if (lost(enemyBoatLog)):
+                if (is_lost(bs.enemyBoatLog)):
                     message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
                     message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
                     main()
@@ -117,7 +117,7 @@ def game_loop(p1: socket.socket,p2: socket.socket):
             bs.enemyBoatLog = p1_boatLog
             player_turn(p2)
             if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
-                if (lost(enemyBoatLog)):
+                if (is_lost(bs.enemyBoatLog)):
                     message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
                     message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
                     main()
