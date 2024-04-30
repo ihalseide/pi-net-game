@@ -221,13 +221,15 @@ def isValidMove(move):
         print("Invalid location")
     return bool
 
-def returnMoveIndex(move) :
+def returnMoveIndex(move: str) -> int:
     if (isValidMove(move)):
         if len(move) == 2:
             moveIndex = ((ord(move[0].upper()) - 65) * 10) + (int(move[1]) - 1)
         else:
             moveIndex = ((ord(move[0].upper()) - 65) * 10) + 9 # Case that you chose 10
-    return moveIndex
+        return moveIndex
+    else:
+        raise ValueError("invalid move coordinate")
 
 # makeMove returns the original move
 def makeMove(move, gameBoard, hitMissBoard, charType = 'X'):
