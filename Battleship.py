@@ -6,7 +6,7 @@ enemyGameBoard = [0] * 100 # Used to determine whether your moves hit or missed,
 enemyBoatLog = [2, 3, 3, 4, 5] 
 personalBoatLog = [2, 3, 3, 4, 5]
 
-monospace_digit_three = "\U0001D7F9" # Alternate 3 
+monospace_digit_three = "C" # Alternate 3 for the second cruiser
 
 sampleBoardString = "555550000044440000003330000000" + monospace_digit_three + monospace_digit_three + monospace_digit_three + "0000000220000000000000000000000000000000000000000000000000000000000"
 
