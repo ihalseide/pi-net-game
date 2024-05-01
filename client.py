@@ -316,11 +316,18 @@ def prompt_valid_board_direction(board: list[str], front_loc: int, length: int) 
         for i in range(length):
             row = row_0 + i * delta[0]
             col = col_0 + i * delta[1]
+            if (not (0 <= row <= 9)) or (not (0 <= col <= 9)):
+                ## Make sure no part of the ship goes off the board.
+                valid = False
+                direction = direction_name(d_in)
+                print(f"Ship cannot be layed out in the '{direction}' direction because the ship would go off the edge")
+                break
             if board[row_col_to_index(row, col)] != PRESENT_UNOCCUPIED:
+                ## Make sure no part of the ship goes over a non-blank part of the board.
                 valid = False
                 coord = row_col_to_coord(row, col)
                 direction = direction_name(d_in)
-                print(f"Ship cannot be layed out in the {direction} direction because there is an obstacle at {coord}")
+                print(f"Ship cannot be layed out in the '{direction}' direction because there is an obstacle at {coord}")
                 break
         if valid:
             return d_in
