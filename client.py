@@ -13,7 +13,12 @@ import socket
 PRESENT_UNOCCUPIED = '~'
 LIBRARY_UNOCCUPIED = '0'
 
-global_logging = False
+## Other tile values.
+HIT_CHAR = 'X'
+MISS_CHAR = '.'
+
+## Network flag for debugging.
+IS_LOGGING_NETWORK = False
 
 # Collection of tuples where each entry is:
 # (length, name, character) for the ship
@@ -44,7 +49,7 @@ def message_send_join(sock: socket.socket, board: list[str]):
     NOTE: this will change based on what we agree on for the net protocol.
     '''
     board_str = visual_board_to_library_board(board)
-    message_send(sock, f"{MSG_JOIN} {board_str}", global_logging)
+    message_send(sock, f"{MSG_JOIN} {board_str}", IS_LOGGING_NETWORK)
 
 def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
     '''Get a user address until a connection can be established'''
@@ -88,7 +93,7 @@ def send_move(sock: socket.socket, move: str):
     Send a game client move to be made to the server socket.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
-    message_send(sock, f"{MSG_MOVE} {move}", global_logging)
+    message_send(sock, f"{MSG_MOVE} {move}", IS_LOGGING_NETWORK)
 
 def get_user_move() -> str:
     '''
@@ -137,7 +142,7 @@ def game_connect(board: list[str], server_ip: str, port: int, timeout: float) ->
     try:
         sock.connect((server_ip, port))
         message_send_join(sock, board)
-        response = message_recv(sock, global_logging)
+        response = message_recv(sock, IS_LOGGING_NETWORK)
         if response == MSG_ACCEPT:
             return sock
         else:
@@ -171,7 +176,7 @@ def client_connect_server_manual(board: list[str]) -> socket.socket | None:
             print("\nCancelled.")
             return None
         message_send_join(sock, board)
-        response = message_recv(sock, global_logging)
+        response = message_recv(sock, IS_LOGGING_NETWORK)
         if response is None:
             ## Got no response, try again.
             print("The server is not hosting a joinable game")
@@ -191,13 +196,17 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
     '''
     Main client game loop to keep sending moves whenever it is this client's turn.
     '''
-    hit_miss_board = [ '~' for i in range(100) ]
+    opponent_board = [ PRESENT_UNOCCUPIED for i in range(100) ]
+    opponent_ship_log = bs.enemyBoatLog.copy()
     move_coord = '<invalid>'
     move_index = -1
-    print(bs.createPrintableGameBoard(board, hit_miss_board))
+    show_board = True
     while True:
-        print("Waiting for your turn...")
-        msg = message_recv(sock, global_logging)
+        if show_board:
+            print(bs.createPrintableGameBoard(board, opponent_board))
+
+        msg = message_recv(sock, IS_LOGGING_NETWORK)
+
         if msg == MSG_MY_TURN:
             ## Server sent that it is our turn to go
             while True:
@@ -205,32 +214,49 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
                 try:
                     move_coord = get_user_move()
                     move_index = bs.returnMoveIndex(move_coord)
-                    if hit_miss_board[move_index] in ('.', 'X'):
-                        # Already guessed
-                        print(f"You already guessed {move_coord.upper()}")
-                        continue
-                    else:
-                        break
-                except:
+                except ValueError:
                     print("Invalid move")
                     continue
-            print(f"move: {move_coord}, index: {move_index}")
+                if opponent_board[move_index] in (MISS_CHAR, HIT_CHAR):
+                    # Already guessed
+                    print(f"You already guessed {move_coord.upper()}")
+                    continue
+                else:
+                    break
             send_move(sock, move_coord)
             # get response in next loop (hit/miss)
+            show_board = False
+
         elif msg == f"{MSG_OUTCOME} hit":
             ## Previously sent move was a hit
             assert(move_index >= 0)
             print(f"Your guess '{move_coord.upper()}' was a HIT!")
-            hit_miss_board[move_index] = 'X'
-            print(bs.createPrintableGameBoard(board, hit_miss_board))
-            print(f"Your guess '{move_coord.upper()}' was a HIT!") # yes, print this again
+            opponent_board[move_index] = HIT_CHAR
+            show_board = True
+
         elif msg == f"{MSG_OUTCOME} miss":
             ## Previously sent move was a miss
             assert(move_index >= 0)
             print(f"Your guess '{move_coord.upper()}' was a MISS!")
-            hit_miss_board[move_index] = '.'
-            print(bs.createPrintableGameBoard(board, hit_miss_board))
-            print(f"Your guess '{move_coord.upper()}' was a MISS!") # yes, print this again
+            opponent_board[move_index] = MISS_CHAR
+            show_board = True
+
+        elif msg.startswith(f"{MSG_OUTCOME} hit-sink"):
+            ## Previously sent move was a hit, and that hit sinks an enemy ship.
+            ## Message is: "<outcome> <hit-sink> <ship-name>"
+            assert(move_index >= 0)
+            ship_char = msg.split(maxsplit=2)[2]
+            ship_name = 'ship'
+            # Find ship name from character
+            for _, s_name, s_char in STANDARD_SHIPS:
+                if s_char == ship_char:
+                    ship_name = s_name
+                    break
+            print(f"Your guess '{move_coord.upper()}' was a HIT and SUNK the opponent's {ship_name.upper()} (marked with '{ship_char}' characters)!")
+            opponent_board[move_index] = HIT_CHAR
+            bs.updatePersonalBoatLog(ship_char, opponent_ship_log)
+            show_board = True
+
         elif msg.startswith(MSG_FINISHED):
             ## Server is ending/finishing the game
             ## Message is: "<finish> <outcome>"
@@ -243,12 +269,34 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
             else:
                 print("Server is ending the game for some other reason.")
                 print(f"Server sent: '{msg}'")
-            # No more turns, done with this function!
-            return
+            # No more turns, done with this game loop!
+            break
+        
+        elif msg.startswith(MSG_NOTE_GUESS):
+            ## Server is sending the opponent's guess on our board.
+            ## Message is: "<note> <coordinate>"
+            the_coord = msg.split(maxsplit=1)[1]
+            ## Add hit/miss mark to own board
+            try:
+                the_coord_index = bs.returnMoveIndex(the_coord)
+            except ValueError:
+                ## Ignore this message
+                continue
+            cell_val = board[the_coord_index]
+            is_hit = (cell_val != PRESENT_UNOCCUPIED) and (cell_val != MISS_CHAR)
+            hit_str = "HIT" if is_hit else "MISS"
+            ## Update the cell to hit or miss unless it is already a hit or miss.
+            if (cell_val != MISS_CHAR) and (cell_val != HIT_CHAR):
+                hit_or_miss_char = HIT_CHAR if is_hit else MISS_CHAR
+                board[the_coord_index] = hit_or_miss_char
+            print(f"The opponent fired at your '{the_coord.upper()}' square, which was a {hit_str}.")
+            show_board = True
+
         else:
             ## Other message
             print(f"Unhandled server message type.")
             print(f"Received server data: '{msg}'")
+            show_board = False
 
 def prompt_valid_board_location(board: list[str]) -> int:
     while True:
