@@ -18,6 +18,7 @@ MSG_ACCEPT = "accept" # from server to client: accept connection.
 MSG_FINISHED = "finish" # from server to client: game over. Takes argument: win/lose (see next lines below).
 MSG_FINISHED_LOSE = "lose" # second part of the MSG_FINISHED message
 MSG_FINISHED_WIN = "win" # second part of the MSG_FINISHED message
+MSG_NOTE_GUESS = "note_guess" # New message type for server telling what a guess from the other client was.
 
 def message_send(sock: socket.socket, message: str, do_log=True):
     '''
