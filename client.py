@@ -265,7 +265,7 @@ def prompt_valid_board_location(board: list[str]) -> int:
 
 def prompt_board_direction() -> str:
     while True:
-        d = input("Enter direction for the ship to face, starting from the previous location. (Up, Down, Left, or Right): ")
+        d = input("Enter direction for the ship to face, starting from the previous location. (u/d/l/r for Up, Down, Left, or Right): ")
         if not d:
             print("Cannot be empty")
             continue
@@ -273,7 +273,7 @@ def prompt_board_direction() -> str:
         if d in 'udlr':
             return d
         else:
-            print("Please enter u[p], d[own], l[eft], or r[ight]")
+            print("Please enter [u]p, [d]own, [l]eft, or [r]ight")
 
 def index_to_row_col(index: int) -> tuple[int, int]:
     if index > 100:
@@ -286,6 +286,10 @@ def row_col_to_index(row: int, col: int) -> int:
     return row * 10 + col
 
 def row_col_to_coord(row: int, col: int) -> str:
+    if (not (0 <= row <= 9)):
+        raise ValueError(f"invalid row value: {row}")
+    if (not (0 <= col <= 9)):
+        raise ValueError(f"invalid column value: {col}")
     return 'ACDEFGHIJ'[row] + str(col)
 
 def direction_name(direction: str) -> str:
@@ -297,7 +301,7 @@ def direction_name(direction: str) -> str:
     }
     return names[direction]
 
-def direction_to_delta(direction: str) -> tuple[int, int]:
+def direction_to_row_col_delta(direction: str) -> tuple[int, int]:
     # maps directions to delta_row, delta_column
     row_col_delta = {
         'u': (-1, 0),
@@ -311,26 +315,34 @@ def prompt_valid_board_direction(board: list[str], front_loc: int, length: int) 
     while True:
         d_in = prompt_board_direction()
         row_0, col_0 = index_to_row_col(front_loc)
-        delta = direction_to_delta(d_in)
+        delta_row, delta_col = direction_to_row_col_delta(d_in)
+        ## Make sure each square following in the direction is valid.
         valid = True
         for i in range(length):
-            row = row_0 + i * delta[0]
-            col = col_0 + i * delta[1]
+            row = row_0 + i * delta_row
+            col = col_0 + i * delta_col
+            if (not (0 <= row <= 9)) or (not (0 <= col <= 9)):
+                ## Make sure no part of the ship goes off the board.
+                valid = False
+                direction = direction_name(d_in)
+                print(f"Ship cannot be layed out in the '{direction}' direction because the ship would go off the edge")
+                break
             if board[row_col_to_index(row, col)] != PRESENT_UNOCCUPIED:
+                ## Make sure no part of the ship goes over a non-blank part of the board.
                 valid = False
                 coord = row_col_to_coord(row, col)
                 direction = direction_name(d_in)
-                print(f"Ship cannot be layed out in the {direction} direction because there is an obstacle at {coord}")
+                print(f"Ship cannot be layed out in the '{direction}' direction because there is an obstacle at {coord}")
                 break
         if valid:
             return d_in
 
 def set_ship_squares(board: list[str], front_loc: int, direction: str, length: int, ship_value: str):
     row_0, col_0 = index_to_row_col(front_loc)
-    delta = direction_to_delta(direction)
+    delta_row, delta_col = direction_to_row_col_delta(direction)
     for i in range(length):
-        row = row_0 + i * delta[0]
-        col = col_0 + i * delta[1]
+        row = row_0 + i * delta_row
+        col = col_0 + i * delta_col
         board[row_col_to_index(row, col)] = ship_value
 
 def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> list[str]:
