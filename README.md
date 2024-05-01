@@ -25,22 +25,16 @@ To run the server:
 python3 server.py
 ```
 
-The client will prompt for a server address to connect to (and will save a successfully connected address to `server.txt`).
+The client will prompt for a server address to connect to.
 To run the client:
 
 ```bash
 python3 client.py
 ```
 
-If the previous client connection was successful, you can run the following to quickly use the same server address (at least if your shell supports piping):
-
-```bash
-python3 client.py < server.txt
-```
-
 ## Program architecture
 
-Both the server and client script use `NetMessage.py` as a module for common networking code and use `Battleship.py` as a module for the common gameplay code.
+Both the server and client script use 'NetMessage.py' as a module for common networking code and use 'Battleship.py' as a module for the common gameplay code.
 
 ## Credits
 - Ryan Andrews
