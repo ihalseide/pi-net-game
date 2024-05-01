@@ -145,7 +145,7 @@ def cleanup_between():
 def main() -> None:
     global sock
     if sock == None:
-        sock = socket.create_server(('localhost', 7777), family=socket.AF_INET, backlog=1)
+        sock = socket.create_server(('', 7777), family=socket.AF_INET, backlog=1)
     else:
         cleanup_between()
     global p1_sock, p1_addr, p1_board, p2_sock, p2_addr, p2_board, p1_boatLog, p2_boatLog
