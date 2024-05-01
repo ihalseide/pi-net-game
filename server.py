@@ -50,9 +50,14 @@ def player_turn(player: socket.socket):
             move_ind = bs.returnMoveIndex(move)
             target = bs.enemyGameBoard[move_ind]
             if target != '0' and target != 'X':
+                sunk_before = check_sunk(bs.enemyBoatLog)
                 bs.updatePersonalBoatLog(target, bs.enemyBoatLog)
+                sunk_after = check_sunk(bs.enemyBoatLog)
                 bs.enemyGameBoard[move_ind] = 'X'
-                message_send(player, f"{MSG_OUTCOME} hit")
+                if sunk_before == sunk_after:
+                    message_send(player, f"{MSG_OUTCOME} hit")
+                else:
+                    message_send(player, f"{MSG_OUTCOME} hit-sink {target}")
             else: message_send(player, f"{MSG_OUTCOME} miss")
         else:
             player_turn(player)
@@ -131,6 +136,12 @@ def is_lost(boatLog):
         if boat != 0:
             lost = False
     return lost
+
+def check_sunk(boatLog):
+    sunk = [False, False, False, False, False]
+    for b in range(len(boatLog)):
+        sunk[b] = (boatLog[b] == 0)
+    return sunk
 
 def cleanup_between():
     try:
