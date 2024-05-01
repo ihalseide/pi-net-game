@@ -11,14 +11,14 @@ LENGTH_PREFIX_LENGTH: int = 5
 ## Network message types -- based what the a message starts with (the prefix).
 ## NOTE: this will change based on what we agree on for the net protocol.
 MSG_JOIN = "join" # from client to server: request to join. No arguments.
-MSG_MOVE = "move" # from client to server. Takes argument: the board position to guess
-MSG_OUTCOME = "outcome" # from server to client: response to a move message. Takes argument: hit/miss
+MSG_MOVE = "move" # from client to server. Takes argument: the board position to guess.
+MSG_OUTCOME = "outcome" # from server to client: response to a move message. Takes argument: "hit", "miss", or "hit-sink "<coordinate>
 MSG_MY_TURN = "turn" # from server to client. No arguments.
 MSG_ACCEPT = "accept" # from server to client: accept connection.
 MSG_FINISHED = "finish" # from server to client: game over. Takes argument: win/lose (see next lines below).
 MSG_FINISHED_LOSE = "lose" # second part of the MSG_FINISHED message
 MSG_FINISHED_WIN = "win" # second part of the MSG_FINISHED message
-MSG_NOTE_GUESS = "note_guess" # New message type for server telling what a guess from the other client was.
+MSG_NOTE_GUESS = "note_guess" # from server to client: inform client of a guess from the other client (opponent move). Takes argument: the board position.
 
 def message_send(sock: socket.socket, message: str, do_log=True):
     '''
