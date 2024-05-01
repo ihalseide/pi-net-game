@@ -191,10 +191,12 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
     '''
     Main client game loop to keep sending moves whenever it is this client's turn.
     '''
-    hit_miss_board = [ '~' for i in range(100) ]
+    hit_char = 'X'
+    miss_char = '.'
+    opponent_board = [ '~' for i in range(100) ]
     move_coord = '<invalid>'
     move_index = -1
-    print(bs.createPrintableGameBoard(board, hit_miss_board))
+    print(bs.createPrintableGameBoard(board, opponent_board))
     while True:
         print("Waiting for your turn...")
         msg = message_recv(sock, global_logging)
@@ -205,7 +207,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
                 try:
                     move_coord = get_user_move()
                     move_index = bs.returnMoveIndex(move_coord)
-                    if hit_miss_board[move_index] in ('.', 'X'):
+                    if opponent_board[move_index] in (miss_char, hit_char):
                         # Already guessed
                         print(f"You already guessed {move_coord.upper()}")
                         continue
@@ -221,15 +223,15 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
             ## Previously sent move was a hit
             assert(move_index >= 0)
             print(f"Your guess '{move_coord.upper()}' was a HIT!")
-            hit_miss_board[move_index] = 'X'
-            print(bs.createPrintableGameBoard(board, hit_miss_board))
+            opponent_board[move_index] = hit_char
+            print(bs.createPrintableGameBoard(board, opponent_board))
             print(f"Your guess '{move_coord.upper()}' was a HIT!") # yes, print this again
         elif msg == f"{MSG_OUTCOME} miss":
             ## Previously sent move was a miss
             assert(move_index >= 0)
             print(f"Your guess '{move_coord.upper()}' was a MISS!")
-            hit_miss_board[move_index] = '.'
-            print(bs.createPrintableGameBoard(board, hit_miss_board))
+            opponent_board[move_index] = miss_char
+            print(bs.createPrintableGameBoard(board, opponent_board))
             print(f"Your guess '{move_coord.upper()}' was a MISS!") # yes, print this again
         elif msg.startswith(MSG_FINISHED):
             ## Server is ending/finishing the game
@@ -243,8 +245,25 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
             else:
                 print("Server is ending the game for some other reason.")
                 print(f"Server sent: '{msg}'")
-            # No more turns, done with this function!
+            # No more turns, done with this game loop!
             return
+        elif msg.startswith(MSG_NOTE_GUESS):
+            ## Server is sending the opponent's guess on our board.
+            ## Message is: "<note> <coordinate>"
+            the_coord = msg.split(maxsplit=1)[1]
+            
+            ## Add hit/miss mark to own board
+            try:
+                the_coord_index = bs.returnMoveIndex(the_coord)
+            except ValueError:
+                ## Ignore this message
+                continue
+            print(f"Your opponent fired at your {the_coord} square")
+            cell_val = board[the_coord_index]
+            ## Only add the "note" character to a cell if the cell doesn't already have one.
+            if (len(cell_val) == 1) and (cell_val != miss_char) and (cell_val != hit_char):
+                hit_or_miss = miss_char if cell_val == PRESENT_UNOCCUPIED else hit_char
+                board[the_coord_index] += hit_or_miss
         else:
             ## Other message
             print(f"Unhandled server message type.")
