@@ -37,7 +37,7 @@ def get_move(client_sock: socket.socket):
     move = full_move[len(MSG_MOVE)+1:]
     return move
 
-def player_turn(player: socket.socket):
+def player_turn(player: socket.socket, other_player: socket.socket):
     '''
     Inform the player it is their turn, and recieve their move
     this may change depending on what network protocol we agree on
@@ -58,7 +58,9 @@ def player_turn(player: socket.socket):
                     message_send(player, f"{MSG_OUTCOME} hit")
                 else:
                     message_send(player, f"{MSG_OUTCOME} hit-sink {target}")
-            else: message_send(player, f"{MSG_OUTCOME} miss")
+            else: 
+                message_send(player, f"{MSG_OUTCOME} miss")
+            message_send(other_player, f"{MSG_NOTE_GUESS} {move}")
         else:
             player_turn(player)
     except Exception as e:
@@ -111,7 +113,7 @@ def game_loop(p1: socket.socket,p2: socket.socket):
             bs.enemyGameBoard = p2_board
             bs.personalBoatLog = p1_boatLog
             bs.enemyBoatLog = p2_boatLog
-            player_turn(p1)
+            player_turn(p1, p2)
             if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
                 if (is_lost(bs.enemyBoatLog)):
                     message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
@@ -122,7 +124,7 @@ def game_loop(p1: socket.socket,p2: socket.socket):
             bs.enemyGameBoard = p1_board
             bs.personalBoatLog = p2_boatLog
             bs.enemyBoatLog = p1_boatLog
-            player_turn(p2)
+            player_turn(p2, p1)
             if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
                 if (is_lost(bs.enemyBoatLog)):
                     message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
