@@ -11,20 +11,6 @@ import socket
 
 ## Unoccupied tile value.
 PRESENT_UNOCCUPIED = '~'
-LIBRARY_UNOCCUPIED = '0'
-
-def print_my_board(personalGameBoard: list[str]) -> None:
-    # NOTE: a modified version from code taken from the `Battleship.py` file
-    game_board_str = '=' * 22 + '\n'
-    game_board_str += '        Your Board        |\n'
-    game_board_str += "   " + ' '.join(str(i) for i in range(1, 11)) + '   |\n'
-    
-    for i in range(0, len(personalGameBoard), 10):
-        j = int(i / 10)
-        left_col = ' '.join(map(str, personalGameBoard[i:i+10]))
-        game_board_str += f"{chr(65 + j)}  {left_col}    |\n"
-    
-    print(game_board_str)
     
 def message_send_join(sock: socket.socket, board: list[str]):
     '''
@@ -180,14 +166,14 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
     Main client game loop to keep sending moves whenever it is this client's turn.
     '''
     opponent_board = [ PRESENT_UNOCCUPIED for i in range(100) ]
-    opponent_ship_log = bs.enemyBoatLog.copy()
+    opponent_ship_log = bs.create_ship_log(bs.CLASSIC_SHIPS)
     move_coord = '<invalid>'
     move_index = -1
     show_board = True
     invalid_msg_budget = 10
     while True:
         if show_board:
-            print(bs.createPrintableGameBoard(board, opponent_board))
+            bs.print_game_board(board, opponent_board)
 
         ## Get a Message from the server.
         try:
@@ -248,7 +234,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
                     break
             print(f"Your guess '{move_coord.upper()}' was a HIT and SUNK the opponent's {ship_name.upper()} (marked with '{ship_char}' characters)!")
             opponent_board[move_index] = bs.HIT_CHAR
-            bs.updatePersonalBoatLog(ship_char, opponent_ship_log)
+            bs.decrement_boat_log(ship_char, opponent_ship_log)
             show_board = True
 
         elif msg.startswith(MSG_FINISHED):
@@ -391,7 +377,7 @@ def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> li
     board = [ PRESENT_UNOCCUPIED for i in range(100) ]
     dummy_hit_miss = [ ' ' for i in range(100) ]
     for (ship_length, ship_name, ship_value) in ships_info_tuple:
-        print_my_board(board)
+        bs.print_game_board(board, dummy_hit_miss)
         print(f"Place your {ship_name} (occupies {ship_length} tiles)")
         # Loop and catch Ctrl-C for direction choice to allow the user to re-choose the 'front_loc' location
         # in case there is no valid direction for a chosen 'front_loc'.
@@ -404,13 +390,13 @@ def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> li
                 print(f"Undoing the starting position for the {ship_name}...")
                 continue
         set_ship_squares(board, front_loc, direction, ship_length, ship_value)
-    print(bs.createPrintableGameBoard(board, dummy_hit_miss))
+    bs.print_game_board(board, dummy_hit_miss)
     return board
 
 def visual_board_to_library_board(board: list[str]):
     if len(board) != 100:
         raise ValueError(f"board has {len(board)} slots instead of 100")
-    return ''.join([ LIBRARY_UNOCCUPIED if x == PRESENT_UNOCCUPIED else x for x in board ])
+    return bs.game_board_to_str([ bs.UNOCCUPIED if x == PRESENT_UNOCCUPIED else x for x in board ])
 
 def client_main() -> None:
     print("Welcome to the BAT*TLE*SHIP game client")
