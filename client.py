@@ -74,7 +74,7 @@ def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
             continue
         ## Save ip address for next time and get port.
         saved_server_ip = server_ip
-        port = 7777 #input_port()
+        port = input_port()
         try:
             sock = socket.socket(family=family, type=kind, proto=0)
             sock.connect((server_ip, port))
