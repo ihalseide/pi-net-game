@@ -9,8 +9,8 @@ import Battleship as bs
 from NetMessage import *
 
 p1_sock, p1_addr, p1_board, p1_board_hm, p2_sock, p2_addr, p2_board, p2_board_hm = None, None, None, None, None, None, None, None
-p1_boatLog = [2, 3, 3, 4, 5] 
-p2_boatLog = [2, 3, 3, 4, 5]
+p1_boatLog = bs.create_ship_log()
+p2_boatLog = bs.create_ship_log()
 sock = None
 
 def accept_connection(client_sock: socket.socket):
@@ -37,7 +37,7 @@ def get_move(client_sock: socket.socket):
     move = full_move[len(MSG_MOVE)+1:]
     return move
 
-def player_turn(player: socket.socket):
+def player_turn(player: socket.socket, personalGameBoard, enemyGameBoard, personalBoatLog, enemyBoatLog):
     '''
     Inform the player it is their turn, and recieve their move
     this may change depending on what network protocol we agree on
@@ -46,21 +46,21 @@ def player_turn(player: socket.socket):
     try:
         move = get_move(player)
         print("Move was: " + move)
-        if bs.isValidMove(move):
+        if bs.is_valid_coord(move):
             move_ind = bs.returnMoveIndex(move)
-            target = bs.enemyGameBoard[move_ind]
+            target = enemyGameBoard[move_ind]
             if target != '0' and target != 'X':
-                sunk_before = check_sunk(bs.enemyBoatLog)
-                bs.updatePersonalBoatLog(target, bs.enemyBoatLog)
-                sunk_after = check_sunk(bs.enemyBoatLog)
-                bs.enemyGameBoard[move_ind] = 'X'
+                sunk_before = check_sunk(enemyBoatLog)
+                bs.decrement_boat_log(target, enemyBoatLog)
+                sunk_after = check_sunk(enemyBoatLog)
+                enemyGameBoard[move_ind] = 'X'
                 if sunk_before == sunk_after:
                     message_send(player, f"{MSG_OUTCOME} hit")
                 else:
                     message_send(player, f"{MSG_OUTCOME} hit-sink {target}")
             else: message_send(player, f"{MSG_OUTCOME} miss")
         else:
-            player_turn(player)
+            player_turn(player, personalGameBoard, enemyGameBoard, personalBoatLog, enemyBoatLog)
     except Exception as e:
         print(e)
         main()
@@ -108,35 +108,18 @@ def game_loop(p1: socket.socket,p2: socket.socket):
     turn: bool = True
     while True:
         if turn:
-            bs.personalGameBoard = p1_board
-            bs.enemyGameBoard = p2_board
-            bs.personalBoatLog = p1_boatLog
-            bs.enemyBoatLog = p2_boatLog
-            player_turn(p1)
-            if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
-                if (is_lost(bs.enemyBoatLog)):
-                    message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
-                    message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
-                    main()
+            player_turn(p1, p1_board, p2_board, p1_boatLog, p2_boatLog)
+            if bs.is_boat_log_destroyed(p2_boatLog):
+                message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
+                message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
+                main()
         else:
-            bs.personalGameBoard = p2_board
-            bs.enemyGameBoard = p1_board
-            bs.personalBoatLog = p2_boatLog
-            bs.enemyBoatLog = p1_boatLog
-            player_turn(p2)
-            if bs.isGameOver(bs.personalBoatLog, bs.enemyBoatLog):
-                if (is_lost(bs.enemyBoatLog)):
-                    message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
-                    message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
-                    main()
+            player_turn(p2, p2_board, p1_board, p2_boatLog, p1_boatLog)
+            if bs.is_boat_log_destroyed(p1_boatLog):
+                message_send(p2, f"{MSG_FINISHED} {MSG_FINISHED_WIN}")
+                message_send(p1, f"{MSG_FINISHED} {MSG_FINISHED_LOSE}")
+                main()
         turn = not turn
-
-def is_lost(boatLog):
-    lost = True
-    for boat in boatLog:
-        if boat != 0:
-            lost = False
-    return lost
 
 def check_sunk(boatLog):
     sunk = [False, False, False, False, False]
@@ -171,8 +154,8 @@ def main() -> None:
     assert(sock is not None)
     p1_sock = None
     p2_sock = None
-    p1_boatLog = [2, 3, 3, 4, 5] 
-    p2_boatLog = [2, 3, 3, 4, 5] 
+    p1_boatLog = bs.create_ship_log()
+    p2_boatLog = bs.create_ship_log()
     while p1_sock is None:
         p1_sock, p1_addr, p1_board = get_player_empty_board(sock)
     while p2_sock is None:
