@@ -23,7 +23,7 @@ def processEnemyMove(enemyMove, personalGameBoard):
             updatePersonalBoatLog(personalGameBoard[moveIndex]) # Parameter tells us which boat was hit
             isGameOver(personalBoatLog)
 
-def updatePersonalBoatLog(charType, personalBoatLog):
+def updatePersonalBoatLog(charType: str, personalBoatLog: list[int]) -> list[int]:
     if charType == '2':
         personalBoatLog[0] -= 1
 
@@ -63,7 +63,7 @@ def convertGameBoardToString(gameBoard):
 #         rightCol = ' '.join(map(str, hitMissBoard[i:i+10]))
 #         print(f"{chr(65 + j)}  {leftCol}    |    {chr(65 + j)}  {rightCol}")
 
-def createPrintableGameBoard(personalGameBoard, hitMissBoard):
+def createPrintableGameBoard(personalGameBoard, hitMissBoard) -> str:
     game_board_str = '=' * 55 + '\n'
     game_board_str += '        Your Board        |            Hits/Misses\n'
     game_board_str += "   " + ' '.join(str(i) for i in range(1, 11)) + '   |       ' + ' '.join(str(i) for i in range(1, 11)) + '\n'
@@ -208,18 +208,14 @@ def setupGamePieces(personalGameBoard, hitMissBoard):
     return "Let the game begin!"
 
 # Functions for making a move
-def isCharAthruJ(char):
+def isCharAthruJ(char: str) -> bool:
     return char.upper() in 'ABCDEFGHIJ'
 
-def isChar1thru10(char):
+def isChar1thru10(char: str) -> bool:
     return char.isdigit() and 1 <= int(char) <= 10
 
-def isValidMove(move):
-    bool = (len(move) == 2 or len(move) == 3) and isCharAthruJ(move[0]) and isChar1thru10(move[1])
-
-    if not bool and move != "":
-        print("Invalid location")
-    return bool
+def isValidMove(move: str) -> bool:
+    return (len(move) == 2 or len(move) == 3) and isCharAthruJ(move[0]) and isChar1thru10(move[1:])
 
 def returnMoveIndex(move: str) -> int:
     if (isValidMove(move)):
