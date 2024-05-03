@@ -17,9 +17,6 @@ LIBRARY_UNOCCUPIED = '0'
 HIT_CHAR = 'X'
 MISS_CHAR = '.'
 
-## Network flag for debugging.
-IS_LOGGING_NETWORK = False
-
 # Collection of tuples where each entry is:
 # (length, name, character) for the ship
 STANDARD_SHIPS = (
@@ -49,7 +46,7 @@ def message_send_join(sock: socket.socket, board: list[str]):
     NOTE: this will change based on what we agree on for the net protocol.
     '''
     board_str = visual_board_to_library_board(board)
-    message_send(sock, f"{MSG_JOIN} {board_str}", IS_LOGGING_NETWORK)
+    message_send(sock, f"{MSG_JOIN} {board_str}")
 
 def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
     '''Get a user address until a connection can be established'''
@@ -93,7 +90,7 @@ def send_move(sock: socket.socket, move: str):
     Send a game client move to be made to the server socket.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
-    message_send(sock, f"{MSG_MOVE} {move}", IS_LOGGING_NETWORK)
+    message_send(sock, f"{MSG_MOVE} {move}")
 
 def get_user_move() -> str:
     '''
@@ -142,7 +139,7 @@ def game_connect(board: list[str], server_ip: str, port: int, timeout: float) ->
     try:
         sock.connect((server_ip, port))
         message_send_join(sock, board)
-        response = message_recv(sock, IS_LOGGING_NETWORK)
+        response = message_recv(sock)
         if response == MSG_ACCEPT:
             return sock
         else:
@@ -176,7 +173,7 @@ def client_connect_server_manual(board: list[str]) -> socket.socket | None:
             print("\nCancelled.")
             return None
         message_send_join(sock, board)
-        response = message_recv(sock, IS_LOGGING_NETWORK)
+        response = message_recv(sock)
         if response is None:
             ## Got no response, try again.
             print("The server is not hosting a joinable game")
@@ -208,7 +205,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
 
         ## Get a Message from the server.
         try:
-            msg = message_recv(sock, IS_LOGGING_NETWORK)
+            msg = message_recv(sock)
         except (ValueError, OSError):
             ## Ignore up to a certain number of invalid messages
             invalid_msg_budget -= 1
