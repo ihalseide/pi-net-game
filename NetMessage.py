@@ -51,6 +51,7 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
     Messages are in the form: [length field][data field]
     - where the length field is a fixed-length number string (like "00009")
     - where the data field is a string with length given by converting the length field to an integer
+    NOTE: may raise a ValueError if invalid message bytes are received or an OSError if there is an issue with the connection.
     '''
     length_field = sock.recv(LENGTH_PREFIX_LENGTH, socket.MSG_WAITALL)
     if not length_field:
