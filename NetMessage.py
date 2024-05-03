@@ -20,7 +20,7 @@ MSG_FINISHED_LOSE = "lose" # second part of the MSG_FINISHED message
 MSG_FINISHED_WIN = "win" # second part of the MSG_FINISHED message
 MSG_NOTE_GUESS = "note_guess" # from server to client: inform client of a guess from the other client (opponent move). Takes argument: the board position.
 
-def message_send(sock: socket.socket, message: str, do_log=True):
+def message_send(sock: socket.socket, message: str):
     '''
     Send a length-prefixed message string to the socket connection.
     This function is the counterpart to `message_recv`.
@@ -38,13 +38,10 @@ def message_send(sock: socket.socket, message: str, do_log=True):
     length_bytes = length_field.encode()
     assert(len(length_bytes) == LENGTH_PREFIX_LENGTH)
 
-    if do_log:
-        print(f'(message_send)"{length_field}{message}"')
-
     sock.sendall(length_bytes)
     sock.sendall(message_bytes)
 
-def message_recv(sock: socket.socket, do_log=True) -> str:
+def message_recv(sock: socket.socket) -> str:
     '''
     Receive a length-prefixed message string from the socket connection.
     This function is the counterpart to `message_send`.
@@ -58,8 +55,6 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
     if (l := len(length_field)) != LENGTH_PREFIX_LENGTH:
         raise ValueError(f"the connection sent a length field which itself has an unexpected length of {l}")
     length_str = length_field.decode()
-    if do_log:
-        print(f"message_receive(): length_str = '{length_str}'")
     try:
         length_num = int(length_str)
     except ValueError:
@@ -70,6 +65,4 @@ def message_recv(sock: socket.socket, do_log=True) -> str:
     if (actual_length := len(data_field)) != length_num:
         raise ValueError(f"connection indicated it would send {length_num} bytes, but {actual_length} bytes was actually received")
     result = data_field.decode()
-    if do_log:
-        print(f"message_receive(): data = '{result}'")
     return result
