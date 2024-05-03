@@ -201,11 +201,22 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
     move_coord = '<invalid>'
     move_index = -1
     show_board = True
+    invalid_msg_budget = 10
     while True:
         if show_board:
             print(bs.createPrintableGameBoard(board, opponent_board))
 
-        msg = message_recv(sock, IS_LOGGING_NETWORK)
+        ## Get a Message from the server.
+        try:
+            msg = message_recv(sock, IS_LOGGING_NETWORK)
+        except (ValueError, OSError):
+            ## Ignore up to a certain number of invalid messages
+            invalid_msg_budget -= 1
+            if invalid_msg_budget <= 0:
+                print("The network connection is sending too many incomprehenible messages")
+                break
+            else:
+                continue
 
         if msg == MSG_MY_TURN:
             ## Server sent that it is our turn to go
