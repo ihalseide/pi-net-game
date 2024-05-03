@@ -70,10 +70,11 @@ def get_player(sock: socket.socket):
     Get a player socket and address, and make sure they send the proper join message
     sock generally should be the socket the server is running on
     '''
+    port = sock.getsockname()[1]
     while True:
-        print("listening...")
+        print(f"Waiting for a player client on port {port}...")
         (client_sock, client_addr) = sock.accept()
-        print("got one!")
+        print(f"Accepting connection from {client_addr[0]} using port {client_addr[1]}")
         try:
             m = message_recv(client_sock)
             print(m)
@@ -155,8 +156,15 @@ def cleanup_between():
 
 def main() -> None:
     global sock
+
+    import sys
+
+    port_num = 7777
+    if len(sys.argv) > 1:
+        port_num = int(sys.argv[1])
+    
     if sock == None:
-        sock = socket.create_server(('', 7777), family=socket.AF_INET, backlog=1)
+        sock = socket.create_server(('', port_num), family=socket.AF_INET, backlog=1)
     else:
         cleanup_between()
     global p1_sock, p1_addr, p1_board, p2_sock, p2_addr, p2_board, p1_boatLog, p2_boatLog
