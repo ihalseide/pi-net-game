@@ -13,20 +13,6 @@ import socket
 PRESENT_UNOCCUPIED = '~'
 LIBRARY_UNOCCUPIED = '0'
 
-## Other tile values.
-HIT_CHAR = 'X'
-MISS_CHAR = '.'
-
-# Collection of tuples where each entry is:
-# (length, name, character) for the ship
-STANDARD_SHIPS = (
-    (2, 'destroyer', '2'), 
-    (3, 'submarine', '3'), 
-    (3, 'cruiser', bs.monospace_digit_three), 
-    (4, 'battleship', '4'), 
-    (5, 'carrier', '5'),
-)
-
 def print_my_board(personalGameBoard: list[str]) -> None:
     # NOTE: a modified version from code taken from the `Battleship.py` file
     game_board_str = '=' * 22 + '\n'
@@ -225,7 +211,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
                 except ValueError:
                     print("Invalid move")
                     continue
-                if opponent_board[move_index] in (MISS_CHAR, HIT_CHAR):
+                if opponent_board[move_index] in (bs.MISS_CHAR, bs.HIT_CHAR):
                     # Already guessed
                     print(f"You already guessed {move_coord.upper()}")
                     continue
@@ -239,14 +225,14 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
             ## Previously sent move was a hit
             assert(move_index >= 0)
             print(f"Your guess '{move_coord.upper()}' was a HIT!")
-            opponent_board[move_index] = HIT_CHAR
+            opponent_board[move_index] = bs.HIT_CHAR
             show_board = True
 
         elif msg == f"{MSG_OUTCOME} miss":
             ## Previously sent move was a miss
             assert(move_index >= 0)
             print(f"Your guess '{move_coord.upper()}' was a MISS!")
-            opponent_board[move_index] = MISS_CHAR
+            opponent_board[move_index] = bs.MISS_CHAR
             show_board = True
 
         elif msg.startswith(f"{MSG_OUTCOME} hit-sink"):
@@ -256,12 +242,12 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
             ship_char = msg.split(maxsplit=2)[2]
             ship_name = 'ship'
             # Find ship name from character
-            for _, s_name, s_char in STANDARD_SHIPS:
+            for _, s_name, s_char in bs.CLASSIC_SHIPS:
                 if s_char == ship_char:
                     ship_name = s_name
                     break
             print(f"Your guess '{move_coord.upper()}' was a HIT and SUNK the opponent's {ship_name.upper()} (marked with '{ship_char}' characters)!")
-            opponent_board[move_index] = HIT_CHAR
+            opponent_board[move_index] = bs.HIT_CHAR
             bs.updatePersonalBoatLog(ship_char, opponent_ship_log)
             show_board = True
 
@@ -291,11 +277,11 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
                 ## Ignore this message
                 continue
             cell_val = board[the_coord_index]
-            is_hit = (cell_val != PRESENT_UNOCCUPIED) and (cell_val != MISS_CHAR)
+            is_hit = (cell_val != PRESENT_UNOCCUPIED) and (cell_val != bs.MISS_CHAR)
             hit_str = "HIT" if is_hit else "MISS"
             ## Update the cell to hit or miss unless it is already a hit or miss.
-            if (cell_val != MISS_CHAR) and (cell_val != HIT_CHAR):
-                hit_or_miss_char = HIT_CHAR if is_hit else MISS_CHAR
+            if (cell_val != bs.MISS_CHAR) and (cell_val != bs.HIT_CHAR):
+                hit_or_miss_char = bs.HIT_CHAR if is_hit else bs.MISS_CHAR
                 board[the_coord_index] = hit_or_miss_char
             print(f"The opponent fired at your '{the_coord.upper()}' square, which was a {hit_str}.")
             show_board = True
@@ -429,7 +415,7 @@ def visual_board_to_library_board(board: list[str]):
 def client_main() -> None:
     print("Welcome to the BAT*TLE*SHIP game client")
     try:
-        board = player_setup_board(STANDARD_SHIPS)
+        board = player_setup_board(bs.CLASSIC_SHIPS)
     except (KeyboardInterrupt, EOFError):
         print("Board set-up cancelled, so the game will not continue.")
         return

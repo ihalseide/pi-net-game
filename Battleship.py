@@ -1,3 +1,20 @@
+ALT_3 = "\U0001D7F9" # Alternate 3 
+
+## Other tile values.
+HIT_CHAR = 'X'
+MISS_CHAR = '.'
+
+# The classic ship inventory.
+# Collection of tuples where each entry is:
+# (length, name, character) for the ship
+CLASSIC_SHIPS = (
+    (2, 'destroyer', '2'), 
+    (3, 'submarine', '3'), 
+    (3, 'cruiser', ALT_3), 
+    (4, 'battleship', '4'), 
+    (5, 'carrier', '5'),
+)
+
 personalGameBoard = [0] * 100 # Your personal game board with your ships 
 hitMissBoard = [0] * 100 # Will display your moves and whether they were hits or misses
 enemyGameBoard = [0] * 100 # Used to determine whether your moves hit or missed, but will never be displayed
@@ -6,9 +23,9 @@ enemyGameBoard = [0] * 100 # Used to determine whether your moves hit or missed,
 enemyBoatLog = [2, 3, 3, 4, 5] 
 personalBoatLog = [2, 3, 3, 4, 5]
 
-monospace_digit_three = "\U0001D7F9" # Alternate 3 
 
-sampleBoardString = "555550000044440000003330000000" + monospace_digit_three + monospace_digit_three + monospace_digit_three + "0000000220000000000000000000000000000000000000000000000000000000000"
+
+sampleBoardString = "555550000044440000003330000000" + ALT_3 + ALT_3 + ALT_3 + "0000000220000000000000000000000000000000000000000000000000000000000"
 
 # Game setup functions
 
@@ -27,7 +44,7 @@ def updatePersonalBoatLog(charType: str, personalBoatLog: list[int]) -> list[int
     if charType == '2':
         personalBoatLog[0] -= 1
 
-    elif charType == monospace_digit_three:
+    elif charType == ALT_3:
         personalBoatLog[1] -= 1
 
     elif charType == '3':
@@ -191,7 +208,7 @@ def setupGamePieces(personalGameBoard, hitMissBoard):
         front = userInput
         userInput = input("Enter location of the stern (back) of the boat: ")
         back = userInput
-    placeShip(front, back, 3, personalGameBoard, hitMissBoard, monospace_digit_three)
+    placeShip(front, back, 3, personalGameBoard, hitMissBoard, ALT_3)
     print(createPrintableGameBoard)
     front = ""
     back = ""
@@ -260,7 +277,7 @@ def updateBoatLog(charType, enemyBoatLog):
             print("Enemy: You sunk my DESTROYER!")
         else:
             print("Enemy: You hit my DESTROYER!")
-    elif charType == monospace_digit_three:
+    elif charType == ALT_3:
         enemyBoatLog[1] -= 1
         if (enemyBoatLog[1] == 0):
             print("Enemy: You sunk my SUBMARINE!")
