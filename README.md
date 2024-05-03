@@ -1,5 +1,7 @@
 # Multiplayer networked battleship 
 
+NOTE: this branch (robust-client) is not the official version of our project. This is just Izak messing around with tweaks!
+
 Run a server on one computer and connect with 2 clients to play.
 
 ```
