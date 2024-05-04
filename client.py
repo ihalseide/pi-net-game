@@ -10,14 +10,14 @@ from NetMessage import *
 import socket
 
 ## Unoccupied tile value.
-PRESENT_UNOCCUPIED = '~'
+PRESENT_UNOCCUPIED = ' '
     
 def message_send_join(sock: socket.socket, board: list[str]):
     '''
     Send a [join] message to the connection, with the initial board.
     NOTE: this will change based on what we agree on for the net protocol.
     '''
-    board_str = visual_board_to_library_board(board)
+    board_str = bs.game_board_to_str(board)
     message_send(sock, f"{MSG_JOIN} {board_str}")
 
 def send_move(sock: socket.socket, move: str):
@@ -99,7 +99,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
     '''
     Main client game loop to keep sending moves whenever it is this client's turn.
     '''
-    opponent_board = [ PRESENT_UNOCCUPIED for i in range(100) ]
+    opponent_board = bs.create_board()
     opponent_ship_log = bs.create_ship_log(bs.CLASSIC_SHIPS)
     move_coord = '<invalid>'
     move_index = -1
@@ -197,7 +197,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
                 ## Ignore this message
                 continue
             cell_val = board[the_coord_index]
-            is_hit = (cell_val != PRESENT_UNOCCUPIED) and (cell_val != bs.MISS_CHAR)
+            is_hit = (cell_val != bs.UNOCCUPIED) and (cell_val != bs.MISS_CHAR)
             hit_str = "HIT" if is_hit else "MISS"
             ## Update the cell to hit or miss unless it is already a hit or miss.
             if (cell_val != bs.MISS_CHAR) and (cell_val != bs.HIT_CHAR):
@@ -220,7 +220,7 @@ def prompt_valid_board_location(board: list[str]) -> int:
         except ValueError:
             print("\rCannot start placing a boat there: invalid location")
             continue
-        if board[index] != PRESENT_UNOCCUPIED:
+        if board[index] != bs.UNOCCUPIED:
             print("\rCannot start placing a boat there: spot out of range or already occupied")
             continue
         return index
@@ -237,47 +237,11 @@ def prompt_board_direction() -> str:
         else:
             print("Please enter [u]p, [d]own, [l]eft, or [r]ight")
 
-def index_to_row_col(index: int) -> tuple[int, int]:
-    if index > 100:
-        raise ValueError("index out of range")
-    r = index // 10
-    c = index % 10
-    return r, c
-
-def row_col_to_index(row: int, col: int) -> int:
-    return row * 10 + col
-
-def row_col_to_coord(row: int, col: int) -> str:
-    if (not (0 <= row <= 9)):
-        raise ValueError(f"invalid row value: {row}")
-    if (not (0 <= col <= 9)):
-        raise ValueError(f"invalid column value: {col}")
-    return 'ACDEFGHIJ'[row] + str(col)
-
-def direction_name(direction: str) -> str:
-    names = {
-        'u': 'up',
-        'd': 'down',
-        'l': 'left',
-        'r': 'right',
-    }
-    return names[direction]
-
-def direction_to_row_col_delta(direction: str) -> tuple[int, int]:
-    # maps directions to delta_row, delta_column
-    row_col_delta = {
-        'u': (-1, 0),
-        'd': (1, 0),
-        'l': (0, -1),
-        'r': (0, 1),
-    }
-    return row_col_delta[direction]
-
 def prompt_valid_board_direction(board: list[str], front_loc: int, length: int) -> str:
     while True:
         d_in = prompt_board_direction()
-        row_0, col_0 = index_to_row_col(front_loc)
-        delta_row, delta_col = direction_to_row_col_delta(d_in)
+        row_0, col_0 = bs.index_to_row_col(front_loc)
+        delta_row, delta_col = bs.direction_to_row_col_delta(d_in)
         ## Make sure each square following in the direction is valid.
         valid = True
         for i in range(length):
@@ -286,29 +250,21 @@ def prompt_valid_board_direction(board: list[str], front_loc: int, length: int) 
             if (not (0 <= row <= 9)) or (not (0 <= col <= 9)):
                 ## Make sure no part of the ship goes off the board.
                 valid = False
-                direction = direction_name(d_in)
+                direction = bs.direction_name(d_in)
                 print(f"Ship cannot be layed out in the '{direction}' direction because the ship would go off the edge")
                 break
-            if board[row_col_to_index(row, col)] != PRESENT_UNOCCUPIED:
+            if board[bs.row_col_to_index(row, col)] != bs.UNOCCUPIED:
                 ## Make sure no part of the ship goes over a non-blank part of the board.
                 valid = False
-                coord = row_col_to_coord(row, col)
-                direction = direction_name(d_in)
+                coord = bs.row_col_to_coord(row, col)
+                direction = bs.direction_name(d_in)
                 print(f"Ship cannot be layed out in the '{direction}' direction because there is an obstacle at {coord}")
                 break
         if valid:
             return d_in
 
-def set_ship_squares(board: list[str], front_loc: int, direction: str, length: int, ship_value: str):
-    row_0, col_0 = index_to_row_col(front_loc)
-    delta_row, delta_col = direction_to_row_col_delta(direction)
-    for i in range(length):
-        row = row_0 + i * delta_row
-        col = col_0 + i * delta_col
-        board[row_col_to_index(row, col)] = ship_value
-
 def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> list[str]:
-    board = [ PRESENT_UNOCCUPIED for i in range(100) ]
+    board = bs.create_board()
     dummy_hit_miss = [ ' ' for i in range(100) ]
     for (ship_length, ship_name, ship_value) in ships_info_tuple:
         bs.print_game_board(board, dummy_hit_miss)
@@ -323,14 +279,9 @@ def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> li
             except (KeyboardInterrupt, EOFError):
                 print(f"Undoing the starting position for the {ship_name}...")
                 continue
-        set_ship_squares(board, front_loc, direction, ship_length, ship_value)
+        bs.game_board_place_ship(board, front_loc, direction, ship_length, ship_value)
     bs.print_game_board(board, dummy_hit_miss)
     return board
-
-def visual_board_to_library_board(board: list[str]):
-    if len(board) != 100:
-        raise ValueError(f"board has {len(board)} slots instead of 100")
-    return bs.game_board_to_str([ bs.UNOCCUPIED if x == PRESENT_UNOCCUPIED else x for x in board ])
 
 def client_main() -> None:
     print("Welcome to the BAT*TLE*SHIP game client")

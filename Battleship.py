@@ -40,14 +40,18 @@ def decrement_boat_log(ship_char: str, boat_log: dict[str, int]) -> int:
 def game_board_to_str(board: list[str]):
     return ''.join(map(str, board))
 
+def replacer(a, b):
+    '''Returns a one-argument function that will replace 'a' with 'b' '''
+    return lambda x: b if x == a else x
+
 def print_game_board(my_board: list[str], hit_miss_board: list[str]):
     print('=' * 55)
     print('        Your Board        |            Hits/Misses')
     print("   " + ' '.join(str(i) for i in range(1, 11)) + '   |       ' + ' '.join(str(i) for i in range(1, 11)))
     for i in range(0, len(my_board), 10):
         j = int(i / 10)
-        leftCol = ' '.join(map(str, my_board[i:i+10]))
-        rightCol = ' '.join(map(str, hit_miss_board[i:i+10]))
+        leftCol = ' '.join(map(replacer(UNOCCUPIED, ' '), map(str, my_board[i:i+10])))
+        rightCol = ' '.join(map(replacer(UNOCCUPIED, ' '), map(str, hit_miss_board[i:i+10])))
         print(f"{chr(65 + j)}  {leftCol}    |    {chr(65 + j)}  {rightCol}")
 
 def create_printable_game_board_str(my_board, hit_miss_board) -> str:
@@ -113,6 +117,51 @@ def is_boat_log_destroyed(boat_log: dict[str, int]) -> bool:
         if v > 0:
             return False
     return True
+
+
+def index_to_row_col(index: int) -> tuple[int, int]:
+    if index > 100:
+        raise ValueError("index out of range")
+    r = index // 10
+    c = index % 10
+    return r, c
+
+def row_col_to_index(row: int, col: int) -> int:
+    return row * 10 + col
+
+def row_col_to_coord(row: int, col: int) -> str:
+    if (not (0 <= row <= 9)):
+        raise ValueError(f"invalid row value: {row}")
+    if (not (0 <= col <= 9)):
+        raise ValueError(f"invalid column value: {col}")
+    return 'ACDEFGHIJ'[row] + str(col)
+
+def direction_name(direction: str) -> str:
+    names = {
+        'u': 'up',
+        'd': 'down',
+        'l': 'left',
+        'r': 'right',
+    }
+    return names[direction]
+
+def direction_to_row_col_delta(direction: str) -> tuple[int, int]:
+    # maps directions to delta_row, delta_column
+    row_col_delta = {
+        'u': (-1, 0),
+        'd': (1, 0),
+        'l': (0, -1),
+        'r': (0, 1),
+    }
+    return row_col_delta[direction]
+
+def game_board_place_ship(game_board: list[str], front_loc: int, direction: str, length: int, ship_char: str):
+    row_0, col_0 = index_to_row_col(front_loc)
+    delta_row, delta_col = direction_to_row_col_delta(direction)
+    for i in range(length):
+        row = row_0 + i * delta_row
+        col = col_0 + i * delta_col
+        game_board[row_col_to_index(row, col)] = ship_char
 
 # Testing
 if __name__ == '__main__':
