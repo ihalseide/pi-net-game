@@ -15,28 +15,15 @@ PRESENT_UNOCCUPIED = ' '
 def message_send_join(sock: socket.socket, board: list[str]):
     '''
     Send a [join] message to the connection, with the initial board.
-    NOTE: this will change based on what we agree on for the net protocol.
     '''
     board_str = bs.game_board_to_str(board)
     message_send(sock, f"{MSG_JOIN} {board_str}")
-
-def send_move(sock: socket.socket, move: str):
-    '''
-    Send a game client move to be made to the server socket.
-    NOTE: this will change based on what we agree on for the net protocol.
-    '''
-    message_send(sock, f"{MSG_MOVE} {move}")
 
 def get_user_move() -> str:
     '''
     Ask the local player for a square to try to hit on the opponent's board.
     '''
     return input("Enter your move (a square to guess): ").strip().lower()
-
-def read_file(file_path: str) -> bytes:
-    '''Read and return all of the contents of the file at `file_path`.'''
-    with open(file_path, 'rb') as f:
-        return f.read()
 
 def input_IP() -> str:
     '''
@@ -137,7 +124,7 @@ def client_game_loop(sock: socket.socket, board: list[str]) -> None:
                     continue
                 else:
                     break
-            send_move(sock, move_coord)
+            message_send(sock, f"{MSG_MOVE} {move_coord}")
             # get response in next loop (hit/miss)
             show_board = False
 
