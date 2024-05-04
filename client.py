@@ -20,43 +20,6 @@ def message_send_join(sock: socket.socket, board: list[str]):
     board_str = visual_board_to_library_board(board)
     message_send(sock, f"{MSG_JOIN} {board_str}")
 
-def get_address_and_connect_socket() -> tuple[str, int, socket.socket]:
-    '''Get a user address until a connection can be established'''
-    family = socket.AF_INET # use IPv4
-    kind = socket.SOCK_STREAM # use TCP
-    ## Get first IP input.
-    saved_server_ip = input_IP()
-    first_loop = True
-    while True:
-        if first_loop:
-            ## Use the first-entered saved IP
-            server_ip = saved_server_ip
-            first_loop = False
-        else:
-            ## Get new IP address or re-use old value
-            server_ip = input("Enter new server IP (or leave blank to use previous value): ")
-            if not server_ip:
-                print(f"(Reusing previous IP value of \"{saved_server_ip}\")")
-                server_ip = saved_server_ip
-        ## Validate IP address.
-        try:
-            socket.inet_pton(family, server_ip)
-        except OSError:
-            print(f"IP address \"{server_ip}\" is invalid.")
-            continue
-        ## Save ip address for next time and get port.
-        saved_server_ip = server_ip
-        port = input_port()
-        try:
-            sock = socket.socket(family=family, type=kind, proto=0)
-            sock.connect((server_ip, port))
-            return server_ip, port, sock
-            #return socket.create_connection((server_ip, port), timeout=2) # uses TCP
-        except:
-            print(f"Connection request timed out. Could not establish connection to {server_ip} on port {port}")
-            print("Re-enter IP address and port number to try again...")
-            continue
-
 def send_move(sock: socket.socket, move: str):
     '''
     Send a game client move to be made to the server socket.
@@ -105,61 +68,32 @@ def input_port() -> int:
             continue
         return port_num
     
-def game_connect(board: list[str], server_ip: str, port: int, timeout: float) -> socket.socket | None:
+def game_connect(board: list[str], server_ip: str, port: int, timeout_seconds: float = 0.5) -> socket.socket | str:
     sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
-    sock.settimeout(timeout)
-    try:
-        sock.connect((server_ip, port))
-        message_send_join(sock, board)
-        response = message_recv(sock)
-        if response == MSG_ACCEPT:
-            return sock
-        else:
-            print(f"Could not connect, server sent: \"{response}\"")
-    except:
+    sock.settimeout(timeout_seconds)
+    sock.connect((server_ip, port))
+    message_send_join(sock, board)
+    response = message_recv(sock)
+    if response == MSG_ACCEPT:
+        return sock
+    else:
         sock.close()
-    return None
+        return response
 
-'''
-def client_scan_and_connect_server(board: list[str]) -> socket.socket | None:
-    board_str = ''.join(board)
-    port = 7777
-    timeout = 0.3
-    print(f"Looking for local server on port {port}...")
-    for i in range(1, 255):
-        server_ip = f"192.168.1.{i}"
-        print(server_ip)
-        if sock := game_connect(board_str, server_ip, port, timeout):
-            return sock
-    return None
-'''
-
-def client_connect_server_manual(board: list[str]) -> socket.socket | None:
+def ask_and_join_server(board: list[str]) -> socket.socket | None:
+    ## Allow the user to keep trying to connect to servers over and over again.
     while True:
-        # Loop to forever keep getting server addresses to try and join.
+        ip = input_IP()
+        port = input_port()
         try:
-            # Create socket and save a successful connection to a file
-            ip, port, sock = get_address_and_connect_socket()
-            print('INFO', ip, port, sock)
-        except (KeyboardInterrupt, EOFError):
-            print("\nCancelled.")
-            return None
-        message_send_join(sock, board)
-        response = message_recv(sock)
-        if response is None:
-            ## Got no response, try again.
-            print("The server is not hosting a joinable game")
-            sock.close()
-            continue
-        elif response == MSG_ACCEPT:
-            ## Successfully joined.
-            return sock
-        else:
-            ## Server sent some other message
-            print("The requested server is hosting a game and refused your request to join game (a game may already be running)")
-            print(f"Server sent: '{response}'")
-            sock.close()
-            continue
+            result = game_connect(board, ip, port, timeout_seconds=1.0)
+            if isinstance(result, str):
+                print(f"Game server did not let you join, server sent: \"{result}\"")
+            else:
+                print("Successfully joined the server!")
+                return result
+        except OSError:
+            print("Could not create a connection to that server")        
 
 def client_game_loop(sock: socket.socket, board: list[str]) -> None:
     '''
@@ -400,18 +334,20 @@ def visual_board_to_library_board(board: list[str]):
 
 def client_main() -> None:
     print("Welcome to the BAT*TLE*SHIP game client")
-    try:
-        board = player_setup_board(bs.CLASSIC_SHIPS)
-    except (KeyboardInterrupt, EOFError):
-        print("Board set-up cancelled, so the game will not continue.")
-        return
-    sock = client_connect_server_manual(board)
-    if sock is None:
-        print("Did not connect to a server")
-    else:
-        print(f"Successfully joined the game server!")
-        client_game_loop(sock, board)
-        sock.close()
+    while True:
+        print("\nSet up your board for a new game!\n")
+        try:
+            board = player_setup_board(bs.CLASSIC_SHIPS)
+            print("\nJoin a game server with its internet address...\n")
+            sock = ask_and_join_server(board)
+            if sock is not None:
+                try:
+                    client_game_loop(sock, board)
+                finally:
+                    sock.close()
+        except (KeyboardInterrupt, EOFError):
+            break
+    print("Goodbye")
 
 if __name__ == '__main__':
     client_main()
