@@ -265,10 +265,10 @@ def prompt_valid_board_direction(board: list[str], front_loc: int, length: int) 
 
 def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> list[str]:
     board = bs.create_board()
-    dummy_hit_miss = [ ' ' for i in range(100) ]
+    dummy_hit_miss = bs.create_board(fill_value=' ')
     for (ship_length, ship_name, ship_value) in ships_info_tuple:
         bs.print_game_board(board, dummy_hit_miss)
-        print(f"Place your {ship_name} (occupies {ship_length} tiles)")
+        print(f"Place your {ship_name} (which occupies {ship_length} tiles)")
         # Loop and catch Ctrl-C for direction choice to allow the user to re-choose the 'front_loc' location
         # in case there is no valid direction for a chosen 'front_loc'.
         while True:
@@ -284,7 +284,7 @@ def player_setup_board(ships_info_tuple: tuple[tuple[int, str, str], ...]) -> li
     return board
 
 def client_main() -> None:
-    print("Welcome to the BAT*TLE*SHIP game client")
+    print("Welcome to the batship game client")
     try:
         while True:
             print("\nSet up your board for a new game!\n")

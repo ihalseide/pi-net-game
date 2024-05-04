@@ -18,8 +18,8 @@ CLASSIC_SHIPS = (
     (5, 'carrier', '5'),
 )
 
-def create_board() -> list[str]:
-    return [ UNOCCUPIED for _ in range(NUM_ROWS * NUM_COLS) ]
+def create_board(fill_value: str = UNOCCUPIED) -> list[str]:
+    return [ fill_value for _ in range(NUM_ROWS * NUM_COLS) ]
 
 def create_ship_log(ships = CLASSIC_SHIPS) -> dict[str, int]:
     return { ship[1]: ship[0] for ship in ships }
