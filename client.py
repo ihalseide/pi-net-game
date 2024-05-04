@@ -334,9 +334,9 @@ def visual_board_to_library_board(board: list[str]):
 
 def client_main() -> None:
     print("Welcome to the BAT*TLE*SHIP game client")
-    while True:
-        print("\nSet up your board for a new game!\n")
-        try:
+    try:
+        while True:
+            print("\nSet up your board for a new game!\n")
             board = player_setup_board(bs.CLASSIC_SHIPS)
             print("\nJoin a game server with its internet address...\n")
             sock = ask_and_join_server(board)
@@ -345,9 +345,8 @@ def client_main() -> None:
                     client_game_loop(sock, board)
                 finally:
                     sock.close()
-        except (KeyboardInterrupt, EOFError):
-            break
-    print("Goodbye")
+    except (KeyboardInterrupt, EOFError):
+        pass
 
 if __name__ == '__main__':
     client_main()
