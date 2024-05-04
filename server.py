@@ -49,11 +49,11 @@ def player_turn(player: socket.socket, personalGameBoard, enemyGameBoard, person
         if bs.is_valid_coord(move):
             move_ind = bs.returnMoveIndex(move)
             target = enemyGameBoard[move_ind]
-            if target != '0' and target != 'X':
+            if target != bs.UNOCCUPIED and target != bs.HIT_CHAR:
                 sunk_before = check_sunk(enemyBoatLog)
                 bs.decrement_boat_log(target, enemyBoatLog)
                 sunk_after = check_sunk(enemyBoatLog)
-                enemyGameBoard[move_ind] = 'X'
+                enemyGameBoard[move_ind] = bs.HIT_CHAR
                 if sunk_before == sunk_after:
                     message_send(player, f"{MSG_OUTCOME} hit")
                 else:
