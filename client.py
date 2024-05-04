@@ -2,15 +2,12 @@
 
 '''
 Battleship game client.
-This proram is single-threaded.
+This program is single-threaded.
 '''
 
 import Battleship as bs
 from NetMessage import *
 import socket
-
-## Unoccupied tile value.
-PRESENT_UNOCCUPIED = ' '
     
 def message_send_join(sock: socket.socket, board: list[str]):
     '''
@@ -283,8 +280,10 @@ def client_main() -> None:
                     client_game_loop(sock, board)
                 finally:
                     sock.close()
-    except (KeyboardInterrupt, EOFError):
+    except KeyboardInterrupt:
         pass
+    except EOFError:
+        print("reached end of input")
 
 if __name__ == '__main__':
     client_main()
